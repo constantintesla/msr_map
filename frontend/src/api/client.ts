@@ -963,6 +963,51 @@ export interface EngineerLocation {
   updated_at: string;
 }
 
+export interface MovementTrackPoint {
+  lat: number;
+  lon: number;
+  accuracy: number;
+  recorded_at: string;
+}
+
+export interface MovementTrackUser {
+  user_id: number;
+  username: string;
+  side: string;
+  label: string;
+  points: MovementTrackPoint[];
+}
+
+export interface MovementTracksData {
+  game_session_id: number;
+  game_status: string;
+  game_started_at: string | null;
+  tracks: MovementTrackUser[];
+  total_points: number;
+}
+
+export async function fetchMovementTracks(): Promise<MovementTracksData> {
+  const res = await authFetch(`${API_BASE}/api/admin/movement-tracks`, { headers: authHeaders() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail || 'Ошибка загрузки треков');
+  }
+  return res.json();
+}
+
+export async function exportMovementTracks() {
+  const res = await authFetch(`${API_BASE}/api/admin/export/movement-tracks`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Ошибка экспорта треков');
+  const blob = await res.blob();
+  const sessionId = res.headers.get('Content-Disposition')?.match(/session_(\d+)/)?.[1] ?? 'current';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `movement_tracks_session_${sessionId}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function pingEngineerLocation(lat: number, lon: number, accuracy: number) {
   const res = await authFetch(`${API_BASE}/api/location/ping`, {
     method: 'POST',

@@ -2,7 +2,7 @@
   "name": "MSR Map",
   "short_name": "MSR Map",
   "description": "Кадастровая игра preshevkadastr.ru",
-  "start_url": "/#/status",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",

@@ -80,7 +80,7 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route path="/status" element={<Navigate to="/login" replace />} />
+          <Route path="/status" element={<HomeRedirect />} />
           <Route path="*" element={<HomeRedirect />} />
         </Routes>
       </EngineerOrdersProvider>

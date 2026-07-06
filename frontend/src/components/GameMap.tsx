@@ -1,24 +1,17 @@
-import { MapContainer, Marker, Popup, TileLayer, Circle, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, Popup, TileLayer, Circle, Tooltip, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { StatusData, EngineerLocation } from '../api/client';
+import type { StatusData, EngineerLocation, MovementTrackUser } from '../api/client';
 
 import { FENCE_RADIUS_M } from '../utils/haversine';
+import { engineerColor } from '../utils/engineerColor';
 import { pointController } from '../utils/pointControl';
 import MapGridOverlay from './MapGridOverlay';
 import { useMapGrid } from '../hooks/useMapGrid';
 
 const SIDE_A = '#3B82F6';
 const SIDE_B = '#EF4444';
-
-const ENGINEER_COLORS = ['#06B6D4', '#A78BFA', '#F472B6', '#34D399', '#FB923C', '#E879F9', '#2DD4BF', '#FACC15'];
-
-function engineerColor(username: string): string {
-  let h = 0;
-  for (let i = 0; i < username.length; i++) h = (h * 31 + username.charCodeAt(i)) >>> 0;
-  return ENGINEER_COLORS[h % ENGINEER_COLORS.length];
-}
 
 function engineerIcon(color: string) {
   return L.divIcon({
@@ -199,11 +192,13 @@ const landmarkIcon = (kind: string, teamSide: string) => {
 function FitBounds({
   data,
   engineers,
+  movementTracks,
   grid,
   enabled = true,
 }: {
   data: StatusData;
   engineers?: EngineerLocation[];
+  movementTracks?: MovementTrackUser[];
   grid?: { north: number; south: number; east: number; west: number } | null;
   enabled?: boolean;
 }) {
@@ -217,6 +212,7 @@ function FitBounds({
       ...data.caches.map((c) => [c.lat, c.lon] as [number, number]),
       ...(data.landmarks || []).map((lm) => [lm.lat, lm.lon] as [number, number]),
       ...(engineers || []).map((e) => [e.lat, e.lon] as [number, number]),
+      ...(movementTracks || []).flatMap((t) => t.points.map((p) => [p.lat, p.lon] as [number, number])),
     ];
     if (grid) {
       coords.push(
@@ -229,7 +225,7 @@ function FitBounds({
     if (!coords.length) return;
     didFit.current = true;
     map.fitBounds(coords, { padding: [48, 48], maxZoom: 16 });
-  }, [data, engineers, grid, map, enabled]);
+  }, [data, engineers, movementTracks, grid, map, enabled]);
   return null;
 }
 
@@ -338,6 +334,7 @@ interface GameMapProps {
   onPointClick?: (point: StatusData['points'][number]) => void;
   onAdminPopupClose?: () => void;
   engineers?: EngineerLocation[];
+  movementTracks?: MovementTrackUser[];
   viewerSide?: string | null;
   adminStage2Overview?: boolean;
   showGrid?: boolean;
@@ -437,6 +434,7 @@ export default function GameMap({
   onPointClick,
   onAdminPopupClose,
   engineers = [],
+  movementTracks = [],
   viewerSide = null,
   adminStage2Overview = false,
   showGrid = true,
@@ -481,7 +479,13 @@ export default function GameMap({
         {createTarget && onMapClickCreate && (
           <MapClickHandler enabled onClick={onMapClickCreate} />
         )}
-        <FitBounds data={data} engineers={engineers} grid={mapGrid} enabled={autoFitBounds && !flyTo} />
+        <FitBounds
+          data={data}
+          engineers={engineers}
+          movementTracks={movementTracks}
+          grid={mapGrid}
+          enabled={autoFitBounds && !flyTo}
+        />
         {flyTo && <FlyTo center={flyTo} zoom={flyToZoom} flyKey={flyToKey} />}
 
         {/* Базы и старты — рисуем под КТ, но над тайлами */}
@@ -691,6 +695,37 @@ export default function GameMap({
             pathOptions={{ color: '#F59E0B', fillColor: '#F59E0B', fillOpacity: 0.15, weight: 2 }}
           />
         )}
+
+        {movementTracks.map((track) => {
+          if (track.points.length < 2) return null;
+          const color = engineerColor(track.username);
+          const positions = track.points.map((p) => [p.lat, p.lon] as [number, number]);
+          return (
+            <Polyline
+              key={`track-${track.user_id}`}
+              positions={positions}
+              pathOptions={{ color, weight: 3, opacity: 0.85 }}
+            />
+          );
+        })}
+
+        {movementTracks.map((track) => {
+          const last = track.points[track.points.length - 1];
+          if (!last) return null;
+          const color = engineerColor(track.username);
+          return (
+            <Marker
+              key={`track-end-${track.user_id}`}
+              position={[last.lat, last.lon]}
+              icon={engineerIcon(color)}
+              zIndexOffset={850}
+            >
+              <Tooltip direction="top" offset={[0, -34]} permanent className="engineer-label-tooltip">
+                <span style={{ color, fontWeight: 600, fontSize: '11px' }}>{track.label}</span>
+              </Tooltip>
+            </Marker>
+          );
+        })}
 
         {engineers.map((eng) => {
           const color = engineerColor(eng.username);

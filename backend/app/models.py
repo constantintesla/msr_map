@@ -173,6 +173,23 @@ class GameState(Base):
   gps_min_accuracy_for_capture_m: Mapped[int] = mapped_column(Integer, default=0)
   gps_lat_offset: Mapped[float] = mapped_column(Float, default=0.0)
   gps_lon_offset: Mapped[float] = mapped_column(Float, default=0.0)
+  game_session_id: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class MovementTrackPoint(Base):
+  """История GPS-позиций инженера в рамках игровой сессии."""
+  __tablename__ = "movement_track_points"
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  game_session_id: Mapped[int] = mapped_column(Integer, index=True)
+  user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+  username: Mapped[str] = mapped_column(String(64))
+  side: Mapped[str] = mapped_column(String(1))
+  label: Mapped[str] = mapped_column(String(128))
+  lat: Mapped[float] = mapped_column(Float)
+  lon: Mapped[float] = mapped_column(Float)
+  accuracy: Mapped[float] = mapped_column(Float, default=0.0)
+  recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
 class Stage2Assignment(Base):

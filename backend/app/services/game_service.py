@@ -75,6 +75,7 @@ def reset_game(db: Session) -> GameState:
   state.status = GameStatus.IDLE.value
   state.started_at = None
   state.paused_at = None
+  state.game_session_id = (state.game_session_id or 0) + 1
   state.score_a = 0
   state.score_b = 0
   state.current_stage = 1

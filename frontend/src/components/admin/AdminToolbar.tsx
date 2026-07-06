@@ -14,6 +14,7 @@ interface AdminToolbarProps {
   missionOpen: boolean;
   lootPanelOpen: boolean;
   chatOpen: boolean;
+  tracksOpen: boolean;
   hasFilmLoot: boolean;
   onStart: () => void;
   onPause: () => void;
@@ -26,6 +27,7 @@ interface AdminToolbarProps {
   onToggleLoot: () => void;
   onExportLogs: () => void;
   onToggleChat: () => void;
+  onToggleTracks: () => void;
   onStageChange: (stage: number) => void;
   mapEditMode: boolean;
   onToggleMapEdit: () => void;
@@ -77,6 +79,7 @@ export default function AdminToolbar({
   missionOpen,
   lootPanelOpen,
   chatOpen,
+  tracksOpen,
   hasFilmLoot,
   onStart,
   onPause,
@@ -89,6 +92,7 @@ export default function AdminToolbar({
   onToggleLoot,
   onExportLogs,
   onToggleChat,
+  onToggleTracks,
   onStageChange,
   mapEditMode,
   onToggleMapEdit,
@@ -345,6 +349,16 @@ export default function AdminToolbar({
           >
             Чат
           </button>
+          <button
+            type="button"
+            className={`btn text-sm border ${tracksOpen ? 'border-cyan-500 bg-cyan-500/15 text-cyan-400' : 'border-zinc-600'}`}
+            onClick={() => {
+              onToggleTracks();
+              setMobileMenuOpen(false);
+            }}
+          >
+            {tracksOpen ? 'Скрыть треки' : 'Треки'}
+          </button>
           <button type="button" className="btn border border-zinc-600 text-sm" onClick={onExportLogs}>
             CSV
           </button>
@@ -482,6 +496,16 @@ export default function AdminToolbar({
             }}
           >
             {chatOpen ? 'Скрыть чат' : 'Чат'}
+          </button>
+          <button
+            type="button"
+            className={`btn text-sm border ${tracksOpen ? 'border-cyan-500 bg-cyan-500/15 text-cyan-400' : 'border-zinc-600'}`}
+            onClick={() => {
+              onToggleTracks();
+              setMobileMenuOpen(false);
+            }}
+          >
+            {tracksOpen ? 'Скрыть треки' : 'Треки GPS'}
           </button>
           <button type="button" className="btn border border-zinc-600 text-sm" onClick={onExportLogs}>
             CSV лог

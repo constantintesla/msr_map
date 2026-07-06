@@ -74,6 +74,7 @@ def run_migrations() -> None:
   _add_column_if_missing("chat_messages", "recipient_username", "ALTER TABLE chat_messages ADD COLUMN recipient_username VARCHAR(64)")
   _add_column_if_missing("users", "lpd_channel", "ALTER TABLE users ADD COLUMN lpd_channel INTEGER")
   _add_column_if_missing("users", "password_plain", "ALTER TABLE users ADD COLUMN password_plain VARCHAR(16)")
+  _add_column_if_missing("game_state", "game_session_id", "ALTER TABLE game_state ADD COLUMN game_session_id INTEGER DEFAULT 1")
   _add_column_if_missing("game_state", "engineers_per_side_a", "ALTER TABLE game_state ADD COLUMN engineers_per_side_a INTEGER DEFAULT 5")
   _add_column_if_missing("game_state", "engineers_per_side_b", "ALTER TABLE game_state ADD COLUMN engineers_per_side_b INTEGER DEFAULT 5")
   _add_column_if_missing("game_state", "capture_radius_m", "ALTER TABLE game_state ADD COLUMN capture_radius_m INTEGER DEFAULT 15")

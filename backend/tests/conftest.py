@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 from app.auth import create_access_token, hash_password
 from app.config import settings
 from app.database import Base, get_db
-from app.routers import admin, auth, cache, hold, point
+from app.routers import admin, auth, cache, hold, location, point
 from app.models import Cache, GameState, GameStatus, Landmark, Point, User
 from app.services.game_service import start_game
 
@@ -202,6 +202,7 @@ def create_test_app() -> FastAPI:
   test_app.include_router(hold.router)
   test_app.include_router(point.router)
   test_app.include_router(cache.router)
+  test_app.include_router(location.router)
   return test_app
 
 

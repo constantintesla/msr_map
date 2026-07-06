@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.lpd_channels import lpd_label
-from app.models import Cache, EngineerLocation, Point, User
+from app.models import Cache, EngineerLocation, GameStatus, MovementTrackPoint, Point, User
+from app.services.game_service import get_or_create_game_state
 from app.routers import ws
 from app.schemas import EngineerLocationOut, LocationPingRequest
 
@@ -67,6 +68,22 @@ async def location_ping(
     row.lon = body.lon
     row.accuracy = body.accuracy
     row.updated_at = now
+
+  game = get_or_create_game_state(db)
+  if game.started_at and game.status in (GameStatus.RUNNING.value, GameStatus.PAUSED.value):
+    db.add(
+      MovementTrackPoint(
+        game_session_id=game.game_session_id or 1,
+        user_id=user.id,
+        username=user.username,
+        side=user.side,
+        label=label,
+        lat=body.lat,
+        lon=body.lon,
+        accuracy=body.accuracy,
+        recorded_at=now,
+      )
+    )
 
   db.commit()
   await ws.broadcast_admin_event({"e": "location", "t": user.side, "u": user.username})

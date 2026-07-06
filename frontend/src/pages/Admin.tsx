@@ -46,6 +46,7 @@ import AdminSettingsPanel from '../components/admin/AdminSettingsPanel';
 import AdminMapEditorBar from '../components/admin/AdminMapEditorBar';
 import AdminPanelShell from '../components/admin/AdminPanelShell';
 import AdminQuickNav from '../components/admin/AdminQuickNav';
+import AdminTracksPanel from '../components/admin/AdminTracksPanel';
 import MobileSheet from '../components/MobileSheet';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { adminSocketHub } from '../ws/hubs';
@@ -97,6 +98,7 @@ export default function AdminPage() {
   const [chatOpen, setChatOpen] = useState(
     () => typeof window !== 'undefined' && !window.matchMedia('(max-width: 767px)').matches,
   );
+  const [tracksOpen, setTracksOpen] = useState(false);
   const [chatSide, setChatSide] = useState<'A' | 'B'>('A');
   const [chatThread, setChatThread] = useState<'cmd' | 'eng'>('cmd');
   const [chatRefresh, setChatRefresh] = useState(0);
@@ -883,6 +885,7 @@ export default function AdminPage() {
         missionOpen={missionOpen}
         lootPanelOpen={lootPanelOpen}
         chatOpen={chatOpen}
+        tracksOpen={tracksOpen}
         hasFilmLoot={hasFilmLoot}
         onStart={() => void runAdminAction('/game/start')}
         onPause={() => void runAdminAction('/game/pause')}
@@ -907,6 +910,7 @@ export default function AdminPage() {
         onToggleLoot={toggleLootPanel}
         onExportLogs={() => exportLogs()}
         onToggleChat={() => setChatOpen(!chatOpen)}
+        onToggleTracks={() => setTracksOpen((v) => !v)}
         mapEditMode={mapEditMode}
         gameIdle={data.game_status === 'idle'}
         onToggleMapEdit={() => {
@@ -1519,6 +1523,8 @@ export default function AdminPage() {
       <div className="no-print hidden">
         <QRPrint />
       </div>
+
+      {tracksOpen && data && <AdminTracksPanel data={data} onClose={() => setTracksOpen(false)} />}
     </div>
   );
 }

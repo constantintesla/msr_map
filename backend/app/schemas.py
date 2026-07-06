@@ -340,6 +340,29 @@ class EngineerLocationOut(BaseModel):
   updated_at: datetime
 
 
+class MovementTrackPointOut(BaseModel):
+  lat: float
+  lon: float
+  accuracy: float
+  recorded_at: datetime
+
+
+class MovementTrackUserOut(BaseModel):
+  user_id: int
+  username: str
+  side: str
+  label: str
+  points: list[MovementTrackPointOut]
+
+
+class MovementTracksResponse(BaseModel):
+  game_session_id: int
+  game_status: str
+  game_started_at: datetime | None
+  tracks: list[MovementTrackUserOut]
+  total_points: int
+
+
 class HoldConfirmRequest(BaseModel):
   point_id: int
   side: str = Field(pattern="^[AB]$")

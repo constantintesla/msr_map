@@ -31,6 +31,7 @@ from app.schemas import (
   MapPointCreate,
   MapPointUpdate,
   MertvyakUpdate,
+  MovementTracksResponse,
   Stage2AssignmentItem,
   Stage1CodeUpdate,
   Stage2MissionUpdate,
@@ -40,6 +41,7 @@ from app.schemas import (
   StatusResponse,
 )
 from app.services import map_edit_service
+from app.services.movement_track_service import current_session_tracks, session_track_rows
 from app.point_codes import stage1_point_code
 from app.qr_tokens import ensure_cache_qr_token, ensure_point_qr_token, qr_entry_url
 from app.services.capture_settings import (
@@ -741,6 +743,54 @@ def admin_export_engineers(
     io.BytesIO(content),
     media_type="text/csv; charset=utf-8",
     headers={"Content-Disposition": 'attachment; filename="engineers.csv"'},
+  )
+
+
+@router.get("/movement-tracks", response_model=MovementTracksResponse)
+def admin_movement_tracks(
+  db: Annotated[Session, Depends(get_db)],
+  _: Annotated[User, Depends(require_admin)],
+):
+  return current_session_tracks(db)
+
+
+@router.get("/export/movement-tracks")
+def admin_export_movement_tracks(
+  db: Annotated[Session, Depends(get_db)],
+  _: Annotated[User, Depends(require_admin)],
+):
+  game = db.query(GameState).filter(GameState.id == 1).first()
+  if game is None:
+    game = GameState(id=1)
+  rows = session_track_rows(db, game)
+
+  output = io.StringIO()
+  writer = csv.writer(output)
+  writer.writerow(
+    ["game_session_id", "user_id", "username", "side", "label", "lat", "lon", "accuracy_m", "recorded_at"]
+  )
+  session_id = game.game_session_id or 1
+  for row in rows:
+    writer.writerow(
+      [
+        session_id,
+        row.user_id,
+        row.username,
+        row.side,
+        row.label,
+        row.lat,
+        row.lon,
+        row.accuracy,
+        row.recorded_at.isoformat(),
+      ]
+    )
+
+  content = output.getvalue().encode("utf-8-sig")
+  filename = f"movement_tracks_session_{session_id}.csv"
+  return StreamingResponse(
+    io.BytesIO(content),
+    media_type="text/csv; charset=utf-8",
+    headers={"Content-Disposition": f'attachment; filename="{filename}"'},
   )
 
 
