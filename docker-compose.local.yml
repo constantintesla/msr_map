@@ -1,0 +1,14 @@
+# HTTP-only overlay for local runs without Let's Encrypt certificates.
+# Used automatically by start-prod.ps1 when SSL certs are missing.
+
+services:
+  backend:
+    environment:
+      CORS_ORIGINS: http://localhost,http://127.0.0.1,https://preshevkadastr.ru,https://www.preshevkadastr.ru
+
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+      - frontend_dist:/usr/share/nginx/html:ro

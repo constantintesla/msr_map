@@ -1,25 +1,32 @@
 import { useEngineerProfile } from '../hooks/useEngineerProfile';
 
+function compactRadioLabel(channel: number | null, frequencyMhz: number | null): string | null {
+  if (channel == null) return null;
+  if (frequencyMhz != null) return `${channel}·${frequencyMhz.toFixed(3)}`;
+  return String(channel);
+}
+
 export default function EngineerRadioBadge({ className = '' }: { className?: string }) {
   const profile = useEngineerProfile();
+  const compact = compactRadioLabel(profile?.lpd_channel ?? null, profile?.lpd_frequency_mhz ?? null);
 
-  if (!profile?.lpd_label) {
+  if (!compact) {
     return (
       <span
-        className={`inline-flex items-center rounded-md border border-zinc-800 bg-zinc-900/80 px-2 py-0.5 text-[11px] text-zinc-500 ${className}`}
+        className={`shrink-0 text-[10px] font-mono text-zinc-600 ${className}`}
+        title="Канал LPD не назначен"
       >
-        📻 канал не назначен
+        LPD —
       </span>
     );
   }
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-zinc-200 ${className}`}
-      title={profile.lpd_label}
+      className={`shrink-0 text-[10px] font-mono tabular-nums text-zinc-400 ${className}`}
+      title={profile?.lpd_label ?? `LPD ${compact}`}
     >
-      <span className="opacity-70">📻</span>
-      {profile.lpd_label}
+      LPD {compact}
     </span>
   );
 }

@@ -197,14 +197,17 @@ export default function CachePage({ cacheId, qrToken }: CachePageProps) {
           <h1 className="font-bold">{cache.name}</h1>
           <p className="text-sm text-zinc-400">
             {isFilmLoot ? `Задача-2 · ${lootLabel}` : isMertvyak ? 'Этап 3 · Мертвяк' : 'Схрон'} · {side}
+            <span className="text-zinc-700 mx-1.5" aria-hidden>
+              ·
+            </span>
+            <EngineerRadioBadge className="inline" />
           </p>
           {isFilmLoot && (
             <p className="text-xs text-zinc-500 mt-1">
               Страница открыта по QR. Код выдаёт штаб.
             </p>
           )}
-          <div className="mt-1.5 space-y-2">
-            <EngineerRadioBadge />
+          <div className="mt-1.5">
             <EngineerOrderBanner />
           </div>
         </div>

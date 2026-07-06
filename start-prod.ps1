@@ -14,11 +14,15 @@
 
 .EXAMPLE
   .\start-prod.ps1 -Rebuild
+
+.EXAMPLE
+  .\start-prod.ps1 -Local
 #>
 param(
     [switch]$Stop,
     [switch]$Rebuild,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$Local
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +30,50 @@ $Root = $PSScriptRoot
 $EnvFile = Join-Path $Root ".env"
 $EnvExample = Join-Path $Root ".env.example"
 $ComposeFile = Join-Path $Root "docker-compose.yml"
+$ComposeLocalFile = Join-Path $Root "docker-compose.local.yml"
+$ComposeSslExternalFile = Join-Path $Root "docker-compose.ssl-external.yml"
+$LegacyCertVolume = "msrv_b9_kadastr_certbot_conf"
+$CertDomain = "preshevkadastr.ru"
+
+function Test-DockerVolume {
+    param([string]$Name)
+    docker volume inspect $Name 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+}
+
+function Test-LegacySslCerts {
+    if (-not (Test-DockerVolume $LegacyCertVolume)) {
+        return $false
+    }
+    $out = docker run --rm -v "${LegacyCertVolume}:/certs:ro" alpine:3.20 `
+        test -f "/certs/live/$CertDomain/fullchain.pem" 2>$null
+    return $LASTEXITCODE -eq 0
+}
+
+function Test-ProjectSslCerts {
+    $out = docker run --rm -v msr_map_certbot_certs:/certs:ro alpine:3.20 `
+        test -f "/certs/live/$CertDomain/fullchain.pem" 2>$null
+    return $LASTEXITCODE -eq 0
+}
+
+function Get-ComposeFiles {
+    param([bool]$UseLocal)
+    $files = @($ComposeFile)
+    if ($UseLocal) {
+        $files += $ComposeLocalFile
+    } elseif (Test-LegacySslCerts) {
+        $files += $ComposeSslExternalFile
+    }
+    return $files
+}
+
+function Get-ComposeServices {
+    param([bool]$UseLocal)
+    if ($UseLocal) {
+        return @("postgres", "backend", "frontend", "nginx")
+    }
+    return @()
+}
 
 function Test-DockerRegistry {
     param([int]$TimeoutSec = 8)
@@ -96,7 +144,15 @@ function Wait-Healthy {
     param([string]$Url, [int]$Retries = 30)
     for ($i = 1; $i -le $Retries; $i++) {
         try {
-            $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5
+            $params = @{
+                Uri             = $Url
+                UseBasicParsing = $true
+                TimeoutSec      = 5
+            }
+            if ($Url -like "https://*") {
+                $params.SkipCertificateCheck = $true
+            }
+            $resp = Invoke-WebRequest @params
             if ($resp.StatusCode -eq 200) {
                 return $true
             }
@@ -109,7 +165,12 @@ function Wait-Healthy {
 
 if ($Stop) {
     Write-Info "Stopping MSR Map production stack"
-    docker compose -f $ComposeFile down
+    $stopFiles = Get-ComposeFiles -UseLocal:$Local
+    if (-not $Local -and (Test-LegacySslCerts)) {
+        $stopFiles = @($ComposeFile, $ComposeSslExternalFile)
+    }
+    $stopArgs = @("compose") + ($stopFiles | ForEach-Object { "-f"; $_ }) + @("down")
+    & docker @stopArgs
     Write-Ok "Stopped"
     exit 0
 }
@@ -125,7 +186,21 @@ if ($Rebuild -and $NoBuild) {
     throw "Use either -Rebuild or -NoBuild, not both"
 }
 
-$composeArgs = @("compose", "-f", $ComposeFile, "up", "-d")
+$useLocal = $Local
+if (-not $useLocal -and -not (Test-LegacySslCerts) -and -not (Test-ProjectSslCerts)) {
+    $useLocal = $true
+    Write-Warn "SSL certificates not found - starting in local HTTP mode (http://localhost)"
+    Write-Warn "For HTTPS on server: issue certs (see README) or use legacy volume msrv_b9_kadastr_certbot_conf"
+} elseif (-not $useLocal -and (Test-LegacySslCerts)) {
+    Write-Info "Using legacy SSL volume: $LegacyCertVolume"
+}
+
+$composeFiles = Get-ComposeFiles -UseLocal:$useLocal
+$composeArgs = @("compose") + ($composeFiles | ForEach-Object { "-f"; $_ }) + @("up", "-d")
+$services = Get-ComposeServices -UseLocal:$useLocal
+if ($services.Count -gt 0) {
+    $composeArgs += $services
+}
 if ($Rebuild) {
     if (-not (Test-DockerRegistry)) {
         Write-DockerHubHelp
@@ -136,7 +211,8 @@ if ($Rebuild) {
   # Default: build only if service images are missing (no forced pull of base images).
   $missing = @()
   foreach ($svc in @("backend", "frontend")) {
-    $img = docker compose -f $ComposeFile images -q $svc 2>$null
+    $imgArgs = @("compose") + ($composeFiles | ForEach-Object { "-f"; $_ }) + @("images", "-q", $svc)
+    $img = & docker @imgArgs 2>$null
     if (-not $img) { $missing += $svc }
   }
   if ($missing.Count -gt 0) {
@@ -164,8 +240,13 @@ try {
 }
 
 Write-Info "Waiting for backend /health"
-if (Wait-Healthy "http://localhost/health") {
-    Write-Ok "Production is up: https://preshevkadastr.ru"
+$healthUrl = if ($useLocal) { "http://localhost/health" } else { "https://localhost/health" }
+if (Wait-Healthy $healthUrl) {
+    if ($useLocal) {
+        Write-Ok "Stack is up: http://localhost"
+    } else {
+        Write-Ok "Production is up: https://preshevkadastr.ru"
+    }
 } else {
-    Write-Warn "Stack started, but /health did not respond in time. Check: docker compose -f docker-compose.yml logs -f"
+    Write-Warn "Stack started, but /health did not respond in time. Check: docker compose logs -f nginx backend"
 }

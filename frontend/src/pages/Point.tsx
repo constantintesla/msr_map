@@ -387,9 +387,12 @@ export default function PointPage({ pointId: pointIdProp }: { pointId?: number }
                 ? 'Этап 3 · Штурм поста · ЛК'
                 : 'Этап 3 · Оборона поста · СБГ'
               : `Этап 1 · Сторона ${side}`}
+            <span className="text-zinc-700 mx-1.5" aria-hidden>
+              ·
+            </span>
+            <EngineerRadioBadge className="inline" />
           </p>
           <div className="mt-1.5 space-y-2">
-            <EngineerRadioBadge />
             <EngineerOrderBanner />
             {data && <Stage1PhaseBanner data={data} />}
           </div>

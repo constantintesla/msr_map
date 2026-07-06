@@ -14,6 +14,13 @@ const STATUS_LABELS: Record<GpsStatus, string> = {
   error: 'GPS (ошибка)',
 };
 
+const STATUS_LABELS_COMPACT: Record<GpsStatus, string> = {
+  good: 'GPS',
+  weak: 'GPS',
+  acquiring: 'GPS…',
+  error: 'GPS!',
+};
+
 export interface GpsStatusIndicatorProps {
   gpsStatus: GpsStatus;
   accuracy: number | null;
@@ -21,6 +28,8 @@ export interface GpsStatusIndicatorProps {
   onRefresh?: () => void;
   captureBlocked?: boolean;
   minCaptureAccuracy?: number;
+  variant?: 'default' | 'compact';
+  className?: string;
 }
 
 export default function GpsStatusIndicator({
@@ -30,11 +39,34 @@ export default function GpsStatusIndicator({
   onRefresh,
   captureBlocked,
   minCaptureAccuracy,
+  variant = 'default',
+  className = '',
 }: GpsStatusIndicatorProps) {
   const showHint = gpsStatus === 'acquiring' || gpsStatus === 'weak';
 
+  if (variant === 'compact') {
+    return (
+      <span className={`inline-flex items-center gap-1 shrink-0 ${className}`}>
+        <span className={`font-mono tabular-nums ${STATUS_STYLES[gpsStatus]}`}>
+          {STATUS_LABELS_COMPACT[gpsStatus]}
+          {accuracy != null && accuracy > 0 ? ` ±${Math.round(accuracy)}м` : ''}
+        </span>
+        {onRefresh && (
+          <button
+            type="button"
+            className="text-zinc-500 hover:text-zinc-300 underline decoration-zinc-700 underline-offset-2"
+            onClick={onRefresh}
+            title="Обновить GPS"
+          >
+            обновить
+          </button>
+        )}
+      </span>
+    );
+  }
+
   return (
-    <div className="space-y-1">
+    <div className={`space-y-1 ${className}`}>
       <div className="flex items-center gap-2 flex-wrap">
         <p className={`text-sm font-mono tabular-nums ${STATUS_STYLES[gpsStatus]}`}>
           {STATUS_LABELS[gpsStatus]}

@@ -1,0 +1,6 @@
+# Use existing Let's Encrypt volume from legacy msrv_b9_kadastr stack.
+
+volumes:
+  certbot_certs:
+    external: true
+    name: msrv_b9_kadastr_certbot_conf

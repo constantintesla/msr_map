@@ -8,3 +8,4 @@ uploads/
 *.pyc
 .grid_cache/
 tests/
+scripts/

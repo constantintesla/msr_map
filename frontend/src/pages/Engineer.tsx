@@ -85,44 +85,71 @@ export default function EngineerPage() {
     latest.target_kind === mapSelection.kind &&
     latest.target_id === mapSelection.id;
 
+  const actionBtnClass =
+    'btn text-[11px] md:text-sm border min-h-0 py-1 px-2 md:py-1.5 md:px-3 rounded-md';
+
   return (
     <div className="h-dvh flex flex-col overflow-hidden bg-bg">
-      <header className="shrink-0 p-4 border-b border-zinc-800 flex justify-between items-start gap-3">
+      <header className="shrink-0 px-3 py-2 md:p-4 border-b border-zinc-800">
         <div className="min-w-0">
-          <h1 className={`font-bold text-lg ${sideColor}`}>Инженер · {sideLabel}</h1>
-          <p className="text-sm text-zinc-400 font-mono truncate">{username}</p>
-          <div className="mt-1">
+          <h1 className={`font-bold text-base md:text-lg leading-tight ${sideColor}`}>
+            Инженер · {sideLabel}
+          </h1>
+          <div className="mt-0.5 flex items-center gap-1 min-w-0 overflow-x-auto text-[10px] md:text-xs text-zinc-400 font-mono tabular-nums whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <span className="truncate max-w-[5.5rem] sm:max-w-[8rem] md:max-w-none text-zinc-300">
+              {username}
+            </span>
+            <span className="text-zinc-700 shrink-0" aria-hidden>
+              ·
+            </span>
+            <EngineerRadioBadge />
+            <span className="text-zinc-700 shrink-0" aria-hidden>
+              ·
+            </span>
             <GpsStatusIndicator
+              variant="compact"
               gpsStatus={gpsStatus}
               accuracy={position?.accuracy ?? null}
-              error={geoError}
               onRefresh={refresh}
             />
           </div>
-          <div className="mt-2 space-y-2">
-            <EngineerRadioBadge />
+          {(geoError || gpsStatus === 'acquiring' || gpsStatus === 'weak') && (
+            <p className="mt-0.5 text-[10px] text-zinc-600 truncate">
+              {geoError ??
+                (gpsStatus === 'acquiring'
+                  ? 'Поиск спутников…'
+                  : 'Слабый сигнал — выйдите на открытое место')}
+            </p>
+          )}
+          <div className="mt-1.5 space-y-1">
             {data && <Stage1PhaseBanner data={data} />}
             <EngineerOrderBanner onShowOnMap={handleShowOrderOnMap} />
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="mt-2 flex items-center justify-end gap-1.5 md:gap-2">
           <button
             type="button"
-            className={`btn text-sm border min-h-0 py-1.5 px-3 ${
+            className={`${actionBtnClass} ${
               mapOpen ? 'border-sideA bg-sideA/15 text-sideA' : 'border-zinc-600 text-zinc-300'
             }`}
             onClick={() => setMapOpen(!mapOpen)}
           >
             Карта {mapOpen ? '▼' : '▲'}
           </button>
-          <EngineerChatSheet side={side} variant="toggle" open={chatOpen} onOpenChange={setChatOpen} />
-          <LogoutButton />
+          <EngineerChatSheet
+            side={side}
+            variant="toggle"
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            buttonClassName={actionBtnClass}
+          />
+          <LogoutButton className={`${actionBtnClass} border-zinc-600`} />
         </div>
       </header>
 
       {mapOpen ? (
-        <div className="flex-1 flex flex-col md:flex-row min-h-0 min-h-[50vh]">
-          <div className="map-page flex-1 min-h-[40vh] md:min-h-0 relative">
+        <div className="relative flex-1 flex flex-col md:flex-row min-h-0 min-h-[50vh]">
+          <div className="map-page flex-1 min-h-[40vh] md:min-h-0">
             {data ? (
               <GameMap
                 data={data}

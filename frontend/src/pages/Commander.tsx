@@ -386,7 +386,7 @@ export default function CommanderPage() {
         </div>
         )}
 
-        <aside className="flex-1 min-h-0 landscape-phone:flex-none landscape-phone:w-[min(100%,22rem)] md:w-[min(100%,22rem)] lg:w-96 shrink-0 flex flex-col bg-zinc-950">
+        <aside className="relative z-10 flex-1 min-h-0 landscape-phone:flex-none landscape-phone:w-[min(100%,22rem)] md:w-[min(100%,22rem)] lg:w-96 shrink-0 flex flex-col bg-zinc-950">
           <nav className="shrink-0 flex border-b border-zinc-800 overflow-x-auto" role="tablist">
             {tabs.map((t) => (
               <button

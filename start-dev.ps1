@@ -74,7 +74,7 @@ function Ensure-Backend {
 
     if (-not $SkipInstall) {
         Write-Info "Installing backend dependencies..."
-        & $VenvPip install -q -r (Join-Path $BackendDir "requirements.txt")
+        & $VenvPip install -q -r (Join-Path $BackendDir "requirements-dev.txt")
     }
 
     if (-not (Test-Path $EnvFile)) {

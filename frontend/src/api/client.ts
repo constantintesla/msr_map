@@ -306,28 +306,6 @@ export interface SideScoreBreakdown {
 }
 
 export interface ScoreBreakdownData {
-  score_a: number;
-  score_b: number;
-  breakdown_a: SideScoreBreakdown;
-  breakdown_b: SideScoreBreakdown;
-}
-
-export async function fetchScoreBreakdown(): Promise<ScoreBreakdownData> {
-  const res = await authFetch(`${API_BASE}/api/admin/scores/breakdown`, { headers: authHeaders() });
-  if (!res.ok) throw new Error('Ошибка загрузки счёта');
-  return res.json();
-}
-
-export interface SideScoreBreakdown {
-  hold: number;
-  captures: number;
-  loot_breach: number;
-  loot_deliver: number;
-  posts: number;
-  caches: number;
-}
-
-export interface ScoreBreakdownData {
   score_a?: number | null;
   score_b?: number | null;
   breakdown_a: SideScoreBreakdown;

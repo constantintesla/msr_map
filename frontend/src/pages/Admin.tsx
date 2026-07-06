@@ -1390,7 +1390,7 @@ export default function AdminPage() {
           />
         )}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 relative">
-        <div className="map-page flex-1 min-h-0 max-md:min-h-0 md:min-h-0 relative z-0">
+        <div className="map-page flex-1 min-h-0 max-md:min-h-0 md:min-h-0 relative">
         <GameMap
           data={data}
             showRadii
@@ -1429,7 +1429,7 @@ export default function AdminPage() {
         </div>
 
         {chatOpen && !isNarrow && (
-          <aside className="no-print shrink-0 h-[min(42vh,360px)] md:h-auto md:w-80 lg:w-96 border-t md:border-t-0 md:border-l border-zinc-800 flex flex-col min-h-0">
+          <aside className="no-print relative z-10 shrink-0 h-[min(42vh,360px)] md:h-auto md:w-80 lg:w-96 border-t md:border-t-0 md:border-l border-zinc-800 flex flex-col min-h-0">
             <FieldOrdersPanel mode="admin" side={chatSide} refreshToken={ordersRefresh} />
             <ChatPanel
               mode="admin"
