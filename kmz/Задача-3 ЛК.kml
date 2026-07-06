@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+	<Document>
+		<name>New track</name>
+		<Placemark>
+			<name>База СБГ</name>
+			<Point>
+				<coordinates>132.831316,44.529954,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Пост-1</name>
+			<Point>
+				<coordinates>132.829889,44.530099,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Пост-2</name>
+			<Point>
+				<coordinates>132.832131,44.530577,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Мертвяк СБГ (резерв)</name>
+			<Point>
+				<coordinates>132.830318,44.529009,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Пост-4</name>
+			<Point>
+				<coordinates>132.832662,44.529506,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Пост-5</name>
+			<Point>
+				<coordinates>132.831826,44.531399,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Пост-6</name>
+			<Point>
+				<coordinates>132.834207,44.531285,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Пост-7</name>
+			<Point>
+				<coordinates>132.831670,44.528302,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Пост-3</name>
+			<Point>
+				<coordinates>132.830967,44.528841,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>База ЛК</name>
+			<Point>
+				<coordinates>132.825946,44.525931,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Мертвяк ЛК (резерв)</name>
+			<Point>
+				<coordinates>132.826225,44.524829,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Мертвяк ЛК (Штурм)</name>
+			<Point>
+				<coordinates>132.833961,44.530589,0</coordinates>
+			</Point>
+		</Placemark>
+	</Document>
+	</kml>

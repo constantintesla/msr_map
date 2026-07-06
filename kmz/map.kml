@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+<name>Карта</name>
+<Style id="marker-48b49e88-ff49-4685-9621-557ef86d8cf8"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Style id="marker-1f4de52a-7e7a-4287-9364-f71710ccb619"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Style id="marker-ea9b7636-96df-4b72-b58a-4560ecd3133a"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Style id="marker-a1b8fb64-8565-4ebb-a28a-738e57183baa"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Style id="marker-9f2fd3a9-adf3-4c2e-b7f7-7485211d5c50"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Style id="marker-e53a4412-d96a-4b36-864e-2f5db03d9f2e"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Style id="marker-70c3250c-12ad-4b4a-8690-e4aa0fcb970f"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Style id="marker-673887c6-d3a0-45e2-b6ac-8c680874bdfa"><IconStyle><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon><scale>1.0</scale><color>ffF48542</color></IconStyle><LabelStyle><color>ffffffff</color><scale>0.8</scale></LabelStyle></Style>
+<Folder><name>Маркеры</name>
+<Placemark><name>База ЛК</name><styleUrl>#marker-48b49e88-ff49-4685-9621-557ef86d8cf8</styleUrl><Point><coordinates>132.825952,44.5259,0</coordinates></Point></Placemark>
+<Placemark><name>Точка старта ЛК</name><styleUrl>#marker-1f4de52a-7e7a-4287-9364-f71710ccb619</styleUrl><Point><coordinates>132.825952,44.5259,0</coordinates></Point></Placemark>
+<Placemark><name>КТ1 (второй этаж)</name><styleUrl>#marker-ea9b7636-96df-4b72-b58a-4560ecd3133a</styleUrl><Point><coordinates>132.826831,44.526772,0</coordinates></Point></Placemark>
+<Placemark><name>КТ2 (второй этаж)</name><styleUrl>#marker-a1b8fb64-8565-4ebb-a28a-738e57183baa</styleUrl><Point><coordinates>132.827851,44.52652,0</coordinates></Point></Placemark>
+<Placemark><name>КТ3 (второй этаж)</name><styleUrl>#marker-9f2fd3a9-adf3-4c2e-b7f7-7485211d5c50</styleUrl><Point><coordinates>132.828526,44.525563,0</coordinates></Point></Placemark>
+<Placemark><name>КТ4 (второй этаж)</name><styleUrl>#marker-e53a4412-d96a-4b36-864e-2f5db03d9f2e</styleUrl><Point><coordinates>132.829615,44.525835,0</coordinates></Point></Placemark>
+<Placemark><name>Точка старта СБГ</name><styleUrl>#marker-70c3250c-12ad-4b4a-8690-e4aa0fcb970f</styleUrl><Point><coordinates>132.830189,44.527606,0</coordinates></Point></Placemark>
+<Placemark><name>База СБГ</name><styleUrl>#marker-673887c6-d3a0-45e2-b6ac-8c680874bdfa</styleUrl><Point><coordinates>132.831316,44.529942,0</coordinates></Point></Placemark>
+</Folder>
+</Document>
+</kml>

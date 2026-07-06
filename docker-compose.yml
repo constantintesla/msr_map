@@ -1,0 +1,80 @@
+name: msr_map
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: msr_map_postgres
+    environment:
+      POSTGRES_USER: msr
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: msr_map
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msr -d msr_map"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      pull: false
+    container_name: msr_map_backend
+    environment:
+      DATABASE_URL: postgresql://msr:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/msr_map
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      CORS_ORIGINS: https://preshevkadastr.ru,https://www.preshevkadastr.ru
+    volumes:
+      - ./kmz:/app/kmz:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      pull: false
+    container_name: msr_map_frontend
+    volumes:
+      - frontend_dist:/output
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: msr_map_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - frontend_dist:/usr/share/nginx/html:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: msr_map_certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: /bin/sh
+    command: -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $$!; done"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  frontend_dist:
+  certbot_www:
+  certbot_certs:
+    # Для продакшена с уже выпущенным сертификатом раскомментируйте:
+    # external: true
+    # name: msrv_b9_kadastr_certbot_conf

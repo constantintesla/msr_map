@@ -1,0 +1,191 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #e2e8f0;
+  background: #000000;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+/* Leaflet: затемнение тайлов на 30% */
+.leaflet-tile-pane {
+  filter: brightness(0.7);
+}
+
+.leaflet-container {
+  background: #111;
+  font-family: inherit;
+}
+
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Контейнер карты — без явной высоты Leaflet рисует 0px */
+.map-root {
+  position: absolute;
+  inset: 0;
+  min-height: 280px;
+}
+
+.map-targets-clickable .leaflet-marker-icon {
+  cursor: pointer;
+}
+
+.map-edit-mode .leaflet-marker-icon {
+  cursor: grab;
+}
+
+.map-edit-mode .leaflet-marker-icon:active {
+  cursor: grabbing;
+}
+
+.map-create-mode .leaflet-container {
+  cursor: crosshair;
+}
+
+.map-edit-mode .leaflet-marker-icon {
+  filter: drop-shadow(0 0 3px rgba(250, 204, 21, 0.85));
+}
+
+.map-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+
+@keyframes marker-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.marker-pulse {
+  animation: marker-pulse 1s ease-in-out infinite;
+}
+
+.btn {
+  @apply min-h-touch px-4 py-3 rounded-lg font-medium transition-opacity active:opacity-80;
+}
+
+.input {
+  @apply min-h-touch w-full px-4 py-3 rounded-lg bg-zinc-900 border border-zinc-700 text-text;
+}
+
+/* QR Print: белый фон, чёрный текст, разрыв страницы A4 */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .qr-page {
+    page-break-after: always;
+    background: white;
+    color: black;
+    padding: 2cm;
+    min-height: 100vh;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.95; }
+}
+
+.pulse-ring {
+  animation: pulse-ring 1.2s ease-in-out infinite;
+  pointer-events: none !important;
+}
+
+.order-pulse-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.order-pulse-ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid #f59e0b;
+  box-sizing: border-box;
+  animation: order-pulse-scale 1.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes order-pulse-scale {
+  0% {
+    transform: scale(0.55);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes explode {
+  0% { transform: scale(0.5); opacity: 1; border-width: 4px; }
+  100% { transform: scale(3); opacity: 0; border-width: 1px; }
+}
+
+.explosion-ring {
+  animation: explode 1.5s ease-out forwards;
+}
+
+.leaflet-admin-popup-anchor {
+  display: none !important;
+}
+
+/* Админ-попап на карте */
+.leaflet-popup.admin-map-popup .leaflet-popup-content-wrapper {
+  @apply bg-zinc-900 text-text border border-zinc-600 rounded-lg shadow-xl;
+}
+
+.leaflet-popup.admin-map-popup .leaflet-popup-tip {
+  @apply bg-zinc-900;
+  border: 1px solid #52525b;
+}
+
+.leaflet-popup.admin-map-popup .leaflet-popup-content {
+  margin: 12px 14px;
+  line-height: 1.4;
+}
+
+.leaflet-popup.admin-map-popup .leaflet-popup-close-button {
+  color: #a1a1aa;
+  font-size: 20px;
+  padding: 6px 8px 0 0;
+}
+
+.leaflet-popup.admin-map-popup .leaflet-popup-close-button:hover {
+  color: #f4f4f5;
+}
+
+.admin-popup .input {
+  @apply min-h-0 py-1 text-sm;
+}
+
+.admin-popup .btn {
+  @apply min-h-0;
+}
+
+.leaflet-tooltip.engineer-label-tooltip {
+  background: rgba(9, 9, 11, 0.92);
+  border: 1px solid #3f3f46;
+  border-radius: 6px;
+  padding: 2px 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.engineer-label-tooltip::before {
+  border-top-color: #3f3f46;
+}

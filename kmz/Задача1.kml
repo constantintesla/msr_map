@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+	<Document>
+		<name>Задача1</name>
+		<Placemark>
+			<name>База ЛК</name>
+			<Point>
+				<coordinates>132.825952,44.525900,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Точка старта ЛК</name>
+			<Point>
+				<coordinates>132.825952,44.525900,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ1 (второй этаж)</name>
+			<Point>
+				<coordinates>132.826831,44.526772,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ2 (кинотеатр)</name>
+			<Point>
+				<coordinates>132.826563,44.526638,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ3 (второй этаж)</name>
+			<Point>
+				<coordinates>132.827448,44.527082,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ4 (второй этаж)</name>
+			<Point>
+				<coordinates>132.827829,44.526573,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ5 (второй этаж)</name>
+			<Point>
+				<coordinates>132.828231,44.526042,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ6 (второй этаж)</name>
+			<Point>
+				<coordinates>132.828596,44.525529,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ7</name>
+			<Point>
+				<coordinates>132.828414,44.527392,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ8</name>
+			<Point>
+				<coordinates>132.828446,44.526535,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ9</name>
+			<Point>
+				<coordinates>132.828988,44.526642,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ10 (второй этаж)</name>
+			<Point>
+				<coordinates>132.829589,44.525820,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ11</name>
+			<Point>
+				<coordinates>132.829937,44.526439,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>КТ12</name>
+			<Point>
+				<coordinates>132.829567,44.526856,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>Точка старта СБГ</name>
+			<Point>
+				<coordinates>132.830189,44.527606,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>База СБГ</name>
+			<Point>
+				<coordinates>132.831316,44.529942,0</coordinates>
+			</Point>
+		</Placemark>
+	</Document>
+</kml>

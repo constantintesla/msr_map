@@ -1,0 +1,46 @@
+# Secrets & local env
+.env
+.env.*
+!.env.example
+backend/.env
+!backend/.env.example
+
+# Databases
+*.db
+*.sqlite3
+
+# Python
+backend/.venv/
+**/__pycache__/
+**/.pytest_cache/
+*.pyc
+*.pyo
+*.egg-info/
+backend/.grid_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# User uploads (chat media, recon photos)
+backend/uploads/
+
+# Logs & temp
+*.log
+*.tmp
+*.bak
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Docker local overrides (optional)
+docker-compose.override.yml
