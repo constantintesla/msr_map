@@ -256,12 +256,10 @@ export default function ChatPanel({
 
   return (
     <div className={`flex flex-col h-full min-h-0 bg-zinc-950 ${className}`}>
+      {mode !== 'engineer' && (
       <div className="shrink-0 px-3 py-2 border-b border-zinc-800 space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-zinc-300">Чат</span>
-          {mode === 'engineer' && (
-            <span className={`ml-auto text-xs ${side === 'A' ? 'text-sideA' : 'text-sideB'}`}>штаб → поле</span>
-          )}
           {mode === 'commander' && (
             <span className={`ml-auto text-xs ${side === 'A' ? 'text-sideA' : 'text-sideB'}`}>
               {thread === 'eng' ? 'отчёты поля' : '↔ штаб'}
@@ -332,6 +330,7 @@ export default function ChatPanel({
           </p>
         )}
       </div>
+      )}
 
       <div ref={listRef} className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-2 min-h-0">
         {messages.length === 0 && (

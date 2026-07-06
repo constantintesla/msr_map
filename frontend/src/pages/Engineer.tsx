@@ -44,11 +44,10 @@ export default function EngineerPage() {
   }, []);
 
   useEffect(() => {
-    if (!mapOpen) return;
     loadStatus();
     const id = setInterval(loadStatus, 15000);
     return () => clearInterval(id);
-  }, [mapOpen, loadStatus]);
+  }, [loadStatus]);
 
   useEffect(() => {
     if (!mapOpen || !flyTo) return;
@@ -88,6 +87,24 @@ export default function EngineerPage() {
   const actionBtnClass =
     'btn text-[11px] md:text-sm border min-h-0 py-1 px-2 md:py-1.5 md:px-3 rounded-md';
 
+  const toggleMap = useCallback(() => {
+    setMapOpen((wasOpen) => {
+      if (wasOpen) setChatOpen(true);
+      return !wasOpen;
+    });
+  }, []);
+
+  const handleChatOpenChange = useCallback((open: boolean) => {
+    if (!open) setMapOpen((mapWasOpen) => mapWasOpen || true);
+    setChatOpen(open);
+  }, []);
+
+  useEffect(() => {
+    if (!mapOpen && !chatOpen) {
+      setMapOpen(true);
+    }
+  }, [mapOpen, chatOpen]);
+
   return (
     <div className="h-dvh flex flex-col overflow-hidden bg-bg">
       <header className="shrink-0 px-3 py-2 md:p-4 border-b border-zinc-800">
@@ -126,13 +143,13 @@ export default function EngineerPage() {
             <EngineerOrderBanner onShowOnMap={handleShowOrderOnMap} />
           </div>
         </div>
-        <div className="mt-2 flex items-center justify-end gap-1.5 md:gap-2">
+        <div className="mt-2 flex items-center justify-center gap-1.5 md:gap-2">
           <button
             type="button"
             className={`${actionBtnClass} ${
               mapOpen ? 'border-sideA bg-sideA/15 text-sideA' : 'border-zinc-600 text-zinc-300'
             }`}
-            onClick={() => setMapOpen(!mapOpen)}
+            onClick={toggleMap}
           >
             Карта {mapOpen ? '▼' : '▲'}
           </button>
@@ -140,7 +157,7 @@ export default function EngineerPage() {
             side={side}
             variant="toggle"
             open={chatOpen}
-            onOpenChange={setChatOpen}
+            onOpenChange={handleChatOpenChange}
             buttonClassName={actionBtnClass}
           />
           <LogoutButton className={`${actionBtnClass} border-zinc-600`} />
@@ -201,23 +218,17 @@ export default function EngineerPage() {
           {chatOpen && (
             <EngineerChatAside
               side={side}
-              onClose={() => setChatOpen(false)}
+              onClose={() => handleChatOpenChange(false)}
               className="shrink-0 h-[min(45vh,400px)] md:h-auto md:w-[min(100%,22rem)] border-t md:border-t-0 md:border-l"
             />
           )}
         </div>
-      ) : chatOpen ? (
-        <EngineerChatAside side={side} onClose={() => setChatOpen(false)} className="flex-1 min-h-0" />
       ) : (
-        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <p className="text-lg text-zinc-300">Карта скрыта</p>
-          <p className="text-sm text-zinc-500 mt-2">Нажмите «Карта ▲» — тап по точке откроет попап на карте</p>
-          {position && (
-            <p className="text-[11px] text-zinc-600 font-mono mt-4">
-              GPS {position.lat.toFixed(5)}, {position.lon.toFixed(5)}
-            </p>
-          )}
-        </main>
+        <EngineerChatAside
+          side={side}
+          onClose={() => handleChatOpenChange(false)}
+          className="flex-1 min-h-0"
+        />
       )}
     </div>
   );

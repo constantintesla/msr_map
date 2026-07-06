@@ -15,7 +15,7 @@ export function EngineerChatAside({ side, onClose, className = '' }: EngineerCha
       className={`relative z-10 flex flex-col min-h-0 bg-zinc-950 border-zinc-800 ${className}`}
     >
       <div className="shrink-0 flex justify-between items-center px-3 py-2 border-b border-zinc-800">
-        <span className="text-sm font-medium text-zinc-300">Чат со штабом</span>
+        <span className="text-sm font-medium text-zinc-300">Штаб</span>
         <button type="button" className="text-zinc-500 text-sm px-2 hover:text-zinc-300" onClick={onClose}>
           ✕
         </button>
@@ -77,7 +77,7 @@ export default function EngineerChatSheet({
               style={{ height: 'min(52vh, 420px)' }}
               role="dialog"
               aria-modal="true"
-              aria-label="Чат со штабом"
+              aria-label="Штаб"
             >
               <EngineerChatAside side={side} onClose={close} className="flex-1 min-h-0 z-auto" />
             </div>
