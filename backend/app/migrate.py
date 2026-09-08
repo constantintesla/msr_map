@@ -138,6 +138,8 @@ def run_migrations() -> None:
   _backfill_stage1_point_codes()
   _backfill_loot_variant()
   _backfill_qr_tokens()
+  _dedupe_active_holds()
+  _ensure_active_hold_unique_indexes()
 
 
 def _ensure_demo_engineer_passwords() -> None:
@@ -209,6 +211,65 @@ def _backfill_loot_variant() -> None:
       db.commit()
   finally:
     db.close()
+
+
+def _dedupe_active_holds() -> None:
+  """Оставить не более одной активной HoldSession/CacheHoldSession на объект —
+  подготовка к partial unique index (дубли могли накопиться из-за гонки confirm_hold)."""
+  from datetime import datetime
+
+  from app.database import SessionLocal
+  from app.models import CacheHoldSession, HoldSession
+
+  db = SessionLocal()
+  try:
+    changed = False
+    now = datetime.utcnow()
+
+    by_point: dict[int, list[HoldSession]] = {}
+    for session in db.query(HoldSession).filter(HoldSession.active.is_(True)).all():
+      by_point.setdefault(session.point_id, []).append(session)
+    for sessions in by_point.values():
+      if len(sessions) <= 1:
+        continue
+      for extra in sorted(sessions, key=lambda s: s.id)[:-1]:
+        extra.active = False
+        extra.ended_at = now
+        changed = True
+
+    by_cache: dict[int, list[CacheHoldSession]] = {}
+    for session in db.query(CacheHoldSession).filter(CacheHoldSession.active.is_(True)).all():
+      by_cache.setdefault(session.cache_id, []).append(session)
+    for sessions in by_cache.values():
+      if len(sessions) <= 1:
+        continue
+      for extra in sorted(sessions, key=lambda s: s.id)[:-1]:
+        extra.active = False
+        extra.ended_at = now
+        changed = True
+
+    if changed:
+      db.commit()
+  finally:
+    db.close()
+
+
+def _ensure_active_hold_unique_indexes() -> None:
+  """Не дать двум запросам одновременно создать по активной сессии на один объект."""
+  active_literal = _bool_default(True)
+  with engine.begin() as conn:
+    conn.execute(
+      text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_hold_sessions_active_point "
+        f"ON hold_sessions(point_id) WHERE active = {active_literal}"
+      )
+    )
+    conn.execute(
+      text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_cache_hold_sessions_active_cache "
+        f"ON cache_hold_sessions(cache_id) WHERE active = {active_literal}"
+      )
+    )
 
 
 def _backfill_qr_tokens() -> None:

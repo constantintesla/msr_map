@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -41,11 +41,26 @@ def assert_game_running(db: Session) -> GameState:
   return state
 
 
+def _shift_active_hold_timestamps(db: Session, delta: timedelta) -> None:
+  """Сдвинуть started_at/last_ping_at активных удержаний на длительность паузы,
+  чтобы захват/дедман считались по игровому, а не календарному времени."""
+  from app.models import CacheHoldSession, HoldSession
+
+  for session in db.query(HoldSession).filter(HoldSession.active.is_(True)).all():
+    session.started_at += delta
+    session.last_ping_at += delta
+  for session in db.query(CacheHoldSession).filter(CacheHoldSession.active.is_(True)).all():
+    session.started_at += delta
+    session.last_ping_at += delta
+
+
 def start_game(db: Session) -> GameState:
   state = get_or_create_game_state(db)
   if state.status == GameStatus.RUNNING.value:
     return state
   now = datetime.utcnow()
+  if state.status == GameStatus.PAUSED.value and state.paused_at is not None:
+    _shift_active_hold_timestamps(db, now - state.paused_at)
   state.status = GameStatus.RUNNING.value
   if state.started_at is None:
     state.started_at = now

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -225,7 +226,6 @@ def confirm_hold(
       from app.services.stage1_schedule_service import assert_stage1_capturable
 
       assert_stage1_capturable(point, game)
-    created = True
     session = HoldSession(
       point_id=point_id,
       side=side,
@@ -237,7 +237,21 @@ def confirm_hold(
     db.add(session)
     if point.stage == 3:
       point.side = side
-    log_event(db, "hold_start", {"point_id": point_id, "side": side, "user_id": user_id})
+    try:
+      log_event(db, "hold_start", {"point_id": point_id, "side": side, "user_id": user_id})
+      created = True
+    except IntegrityError:
+      # Гонка: параллельный запрос уже создал активную сессию на эту точку.
+      db.rollback()
+      session = get_active_hold(db, point_id)
+      if session is None:
+        raise
+      if session.side != side:
+        raise ValueError(HOLD_BUSY_OTHER_SIDE)
+      if session.user_id is not None and session.user_id != user_id:
+        raise ValueError(HOLD_BUSY_OTHER_ENGINEER)
+      session.last_ping_at = now
+      _advance_hold_progress(db, point, session, side, now, game)
 
   db.commit()
   db.refresh(session)

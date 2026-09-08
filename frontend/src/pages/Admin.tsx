@@ -822,7 +822,15 @@ export default function AdminPage() {
 
   const handleKmz = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    if (
+      !window.confirm(
+        'Импортировать KML/KMZ? Все точки, схроны и базы будут заменены, активные захваты/удержания и невыданные приказы будут сброшены.',
+      )
+    ) {
+      return;
+    }
     try {
       await uploadKmz(file);
       load();
@@ -903,7 +911,16 @@ export default function AdminPage() {
             void runAdminAction('/game/reset');
           }
         }}
-        onKmlReload={() => void adminAction('/kml/reload').then(load)}
+        onKmlReload={() => {
+          if (
+            !window.confirm(
+              'Перезагрузить пресет KML? Все точки, схроны и базы будут заменены, активные захваты/удержания и невыданные приказы будут сброшены.',
+            )
+          ) {
+            return;
+          }
+          void adminAction('/kml/reload').then(load);
+        }}
         onKmzChange={handleKmz}
         onToggleSettings={toggleSettings}
         onToggleMission={toggleMissionPanel}

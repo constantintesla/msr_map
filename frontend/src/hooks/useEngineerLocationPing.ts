@@ -35,7 +35,7 @@ export function useEngineerLocationPing(position: GeoPosition | null) {
       pingEngineerLocation(position.lat, position.lon, position.accuracy).catch(() => {});
     };
 
-    send(true);
+    send(lastSent.current === 0);
     const id = setInterval(() => send(false), PING_INTERVAL_MS);
     return () => clearInterval(id);
   }, [position?.lat, position?.lon, position?.accuracy]);

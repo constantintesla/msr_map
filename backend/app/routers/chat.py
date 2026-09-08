@@ -63,8 +63,8 @@ def _can_access_message(user: User, msg: ChatMessage) -> bool:
   if user.role == "engineer":
     if msg.thread != "eng":
       return False
-    if msg.recipient_username and msg.recipient_username != user.username:
-      return msg.sender_username != user.username
+    if msg.recipient_username:
+      return msg.recipient_username == user.username or msg.sender_username == user.username
     return True
   return False
 

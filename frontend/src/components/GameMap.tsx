@@ -391,6 +391,7 @@ function AdminSelectionPopup({
 
   return (
     <Marker
+      key={`${adminSelection.kind}-${adminSelection.id}`}
       ref={markerRef}
       position={[target.lat, target.lon]}
       icon={hiddenPopupIcon}

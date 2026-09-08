@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user, require_engineer
 from app.database import get_db
-from app.models import User
+from app.models import Cache, User
 from app.routers import ws
+from app.routers.cache import _check_geofence
 from app.schemas import CacheHoldConfirmRequest, CacheHoldLeaveRequest, HoldConfirmRequest, HoldLeaveRequest
 from app.services.cache_hold_service import confirm_cache_hold, leave_cache_hold
 from app.services.hold_service import (
@@ -138,9 +139,14 @@ async def hold_leave(
 def cache_hold_confirm(
   body: CacheHoldConfirmRequest,
   db: Annotated[Session, Depends(get_db)],
-  user: Annotated[User, Depends(get_current_user)],
+  user: Annotated[User, Depends(require_engineer)],
 ):
   _require_side(user, body.side)
+  cache = db.query(Cache).filter(Cache.id == body.cache_id).first()
+  if cache is None:
+    raise HTTPException(status_code=404, detail="Объект не найден")
+  game = get_or_create_game_state(db)
+  _check_geofence(game, cache, body.lat, body.lon, body.accuracy)
   try:
     session = confirm_cache_hold(db, body.cache_id, body.side)
     from app.services.cache_hold_service import hold_elapsed_seconds as cache_hold_elapsed
@@ -160,7 +166,7 @@ def cache_hold_confirm(
 def cache_hold_leave(
   body: CacheHoldLeaveRequest,
   db: Annotated[Session, Depends(get_db)],
-  user: Annotated[User, Depends(get_current_user)],
+  user: Annotated[User, Depends(require_engineer)],
 ):
   _require_side(user, body.side)
   session = leave_cache_hold(db, body.cache_id, body.side)

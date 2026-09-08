@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Cache, CacheHoldSession
@@ -59,7 +60,22 @@ def confirm_cache_hold(db: Session, cache_id: int, side: str) -> CacheHoldSessio
       hold_ready=False,
     )
     db.add(session)
-    log_event(db, "cache_hold_start", {"cache_id": cache_id, "side": side})
+    try:
+      log_event(db, "cache_hold_start", {"cache_id": cache_id, "side": side})
+    except IntegrityError:
+      # Гонка: параллельный запрос уже создал активную сессию на этот схрон.
+      db.rollback()
+      session = get_active_cache_hold(db, cache_id)
+      if session is None:
+        raise
+      if session.side != side:
+        raise ValueError("Схрон удерживается другой стороной")
+      session.last_ping_at = now
+      if not session.hold_ready and hold_elapsed_seconds(session, now) >= required:
+        session.hold_ready = True
+        log_event(db, "cache_hold_ready", {"cache_id": cache_id, "side": side})
+      else:
+        log_event(db, "cache_hold_ping", {"cache_id": cache_id, "side": side})
   else:
     if session.side != side:
       raise ValueError("Схрон удерживается другой стороной")

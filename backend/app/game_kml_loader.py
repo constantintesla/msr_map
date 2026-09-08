@@ -3,7 +3,17 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.kmz_parser import ParsedCache, ParsedLandmark, ParsedPoint, load_preset_game_kml
-from app.models import Cache, HoldSession, Landmark, Point
+from app.models import (
+  Cache,
+  CacheHoldSession,
+  FieldOrder,
+  HoldSession,
+  Landmark,
+  Point,
+  PointReconPhoto,
+  Stage2Assignment,
+  User,
+)
 from app.services.game_service import log_event
 
 
@@ -18,10 +28,22 @@ def apply_game_objects(
   """Полная перезапись точек, схронов и ориентиров в БД."""
   landmarks = landmarks or []
 
-  db.query(HoldSession).delete()
-  db.query(Point).delete()
-  db.query(Cache).delete()
-  db.query(Landmark).delete()
+  db.query(PointReconPhoto).delete(synchronize_session=False)
+  db.query(HoldSession).delete(synchronize_session=False)
+  db.query(CacheHoldSession).delete(synchronize_session=False)
+  db.query(Stage2Assignment).delete(synchronize_session=False)
+  db.query(FieldOrder).filter(FieldOrder.target_kind.in_(("point", "cache"))).delete(
+    synchronize_session=False
+  )
+  db.query(User).filter(User.point_id.isnot(None)).update(
+    {User.point_id: None}, synchronize_session=False
+  )
+  db.query(User).filter(User.cache_id.isnot(None)).update(
+    {User.cache_id: None}, synchronize_session=False
+  )
+  db.query(Point).delete(synchronize_session=False)
+  db.query(Cache).delete(synchronize_session=False)
+  db.query(Landmark).delete(synchronize_session=False)
   db.flush()
 
   for i, p in enumerate(points, start=1):

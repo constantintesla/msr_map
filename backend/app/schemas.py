@@ -376,6 +376,9 @@ class HoldLeaveRequest(BaseModel):
 class CacheHoldConfirmRequest(BaseModel):
   cache_id: int
   side: str = Field(pattern="^[AB]$")
+  lat: float | None = None
+  lon: float | None = None
+  accuracy: float | None = None
 
 
 class CacheHoldLeaveRequest(BaseModel):

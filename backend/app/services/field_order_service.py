@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Cache, FieldOrder, Point, User
 from app.services.game_service import get_or_create_game_state
-from app.services.stage2_assignment_service import is_cache_issued
+from app.services.stage2_assignment_service import is_cache_issued, is_stage2_active
 
 
 def _resolve_target(db: Session, target_kind: str, target_id: int) -> tuple[str, float, float]:
