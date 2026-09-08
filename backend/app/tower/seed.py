@@ -11,7 +11,7 @@ from app.qr_tokens import generate_qr_token
 from app.services.engineer_pool_service import generate_engineer_password
 from app.services.scenario_service import create_scenario
 from app.tower.config_service import get_tower_config
-from app.tower.models import Faction, UrPoint, UrZone, VillageCacheTarget
+from app.tower.models import Faction, TowerConfig, UrPoint, UrZone, VillageCacheTarget
 
 TOWER_SCENARIO_NAME = "Башня"
 
@@ -83,7 +83,16 @@ def _generate_manual_code(existing: set[str]) -> str:
 def seed_tower_scenario(db: Session) -> Scenario:
   scenario = db.query(Scenario).filter(Scenario.name == TOWER_SCENARIO_NAME, Scenario.archived_at.is_(None)).first()
   if scenario is not None:
-    return scenario
+    already_seeded = db.query(Faction).filter(Faction.scenario_id == scenario.id).first() is not None
+    if already_seeded:
+      return scenario
+    # Сценарий существует, но не досеялся до конца (например, оборвалось на
+    # середине из-за инфраструктурной ошибки) — не оставляем пустую заглушку
+    # навсегда, а сносим её и сеем заново с чистого листа.
+    db.query(GameState).filter(GameState.id == scenario.id).delete()
+    db.query(TowerConfig).filter(TowerConfig.id == scenario.id).delete()
+    db.query(Scenario).filter(Scenario.id == scenario.id).delete()
+    db.commit()
 
   scenario = create_scenario(db, TOWER_SCENARIO_NAME)
   db.add(GameState(id=scenario.id, engineers_per_side_a=0, engineers_per_side_b=0))
