@@ -133,6 +133,14 @@ def run_migrations() -> None:
   _add_column_if_missing("points", "qr_token", "ALTER TABLE points ADD COLUMN qr_token VARCHAR(24)")
   _add_column_if_missing("caches", "qr_token", "ALTER TABLE caches ADD COLUMN qr_token VARCHAR(24)")
   _add_column_if_missing("caches", "code_verified_qr_token", "ALTER TABLE caches ADD COLUMN code_verified_qr_token VARCHAR(24)")
+  # Башня: faction_id должен появиться до любых ORM-запросов к этим таблицам ниже
+  # (SQLAlchemy подставляет все смэппленные колонки модели в SELECT, включая faction_id).
+  _add_column_if_missing("users", "faction_id", "ALTER TABLE users ADD COLUMN faction_id INTEGER")
+  _add_column_if_missing("chat_messages", "faction_id", "ALTER TABLE chat_messages ADD COLUMN faction_id INTEGER")
+  _add_column_if_missing("field_orders", "faction_id", "ALTER TABLE field_orders ADD COLUMN faction_id INTEGER")
+  _add_column_if_missing(
+    "engineer_locations", "faction_id", "ALTER TABLE engineer_locations ADD COLUMN faction_id INTEGER"
+  )
   for table in (
     "points",
     "caches",
@@ -144,6 +152,7 @@ def run_migrations() -> None:
     "chat_messages",
     "field_orders",
     "movement_track_points",
+    "engineer_locations",
   ):
     _add_column_if_missing(
       table, "scenario_id", f"ALTER TABLE {table} ADD COLUMN scenario_id INTEGER DEFAULT 1"
@@ -193,6 +202,7 @@ def _backfill_scenario_ids() -> None:
     "chat_messages",
     "field_orders",
     "movement_track_points",
+    "engineer_locations",
     "event_log",
   )
   with engine.begin() as conn:

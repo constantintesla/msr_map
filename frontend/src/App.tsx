@@ -5,17 +5,22 @@ import PointPage from './pages/Point';
 import AdminPage from './pages/Admin';
 import EngineerPage from './pages/Engineer';
 import QrEntryPage from './pages/QrEntry';
+import RegisterTowerPage from './pages/RegisterTower';
+import TowerHomePage from './pages/TowerHome';
+import TowerCommanderPage from './pages/TowerCommander';
 import NotificationPings from './hooks/useNotificationPings';
 import { EngineerOrdersProvider } from './context/EngineerOrdersContext';
 import { homePathForRole } from './utils/auth';
 
-function RequireAuth({ children, role }: { children: React.ReactNode; role?: string }) {
+function RequireAuth({ children, role }: { children: React.ReactNode; role?: string | string[] }) {
   const location = useLocation();
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('role');
+  const factionId = localStorage.getItem('faction_id');
   if (!token) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  if (role && userRole !== role) {
-    return <Navigate to={homePathForRole(userRole)} replace />;
+  const allowed = Array.isArray(role) ? role : role ? [role] : null;
+  if (allowed && !(userRole && allowed.includes(userRole))) {
+    return <Navigate to={homePathForRole(userRole, factionId)} replace />;
   }
   return <>{children}</>;
 }
@@ -23,8 +28,9 @@ function RequireAuth({ children, role }: { children: React.ReactNode; role?: str
 function HomeRedirect() {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('role');
+  const factionId = localStorage.getItem('faction_id');
   if (!token) return <Navigate to="/login" replace />;
-  return <Navigate to={homePathForRole(role)} replace />;
+  return <Navigate to={homePathForRole(role, factionId)} replace />;
 }
 
 export default function App() {
@@ -39,10 +45,11 @@ export default function App() {
       <EngineerOrdersProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/join/:token" element={<RegisterTowerPage />} />
           <Route
             path="/g/:token"
             element={
-              <RequireAuth role="engineer">
+              <RequireAuth role={['engineer', 'faction', 'commander']}>
                 <QrEntryPage />
               </RequireAuth>
             }
@@ -52,6 +59,22 @@ export default function App() {
             element={
               <RequireAuth role="commander">
                 <CommanderPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/tower-command"
+            element={
+              <RequireAuth role="commander">
+                <TowerCommanderPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/tower"
+            element={
+              <RequireAuth role="faction">
+                <TowerHomePage />
               </RequireAuth>
             }
           />

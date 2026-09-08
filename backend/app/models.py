@@ -43,6 +43,7 @@ class User(Base):
   point_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("points.id"), nullable=True)
   cache_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("caches.id"), nullable=True)
   lpd_channel: Mapped[int | None] = mapped_column(Integer, nullable=True)  # LPD 1–69
+  faction_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("factions.id"), nullable=True)
 
 
 class Point(Base):
@@ -250,6 +251,7 @@ class ChatMessage(Base):
   media_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
   media_filename: Mapped[str | None] = mapped_column(String(256), nullable=True)
   recipient_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
+  faction_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("factions.id"), nullable=True)
 
 
 class EngineerLocation(Base):
@@ -257,6 +259,7 @@ class EngineerLocation(Base):
   __tablename__ = "engineer_locations"
 
   user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   username: Mapped[str] = mapped_column(String(64))
   side: Mapped[str] = mapped_column(String(1))
   label: Mapped[str] = mapped_column(String(128))
@@ -264,6 +267,7 @@ class EngineerLocation(Base):
   lon: Mapped[float] = mapped_column(Float)
   accuracy: Mapped[float] = mapped_column(Float, default=0.0)
   updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+  faction_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("factions.id"), nullable=True)
 
 
 class FieldOrder(Base):
@@ -284,3 +288,4 @@ class FieldOrder(Base):
   target_lon: Mapped[float] = mapped_column(Float)
   note: Mapped[str | None] = mapped_column(Text, nullable=True)
   dismissed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+  faction_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("factions.id"), nullable=True)

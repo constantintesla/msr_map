@@ -53,6 +53,7 @@ import AdminPanelShell from '../components/admin/AdminPanelShell';
 import AdminQuickNav from '../components/admin/AdminQuickNav';
 import AdminTracksPanel from '../components/admin/AdminTracksPanel';
 import ScenarioSwitcher from '../components/admin/ScenarioSwitcher';
+import TowerAdminPanel from '../components/admin/TowerAdminPanel';
 import MobileSheet from '../components/MobileSheet';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { adminSocketHub } from '../ws/hubs';
@@ -1094,6 +1095,7 @@ export default function AdminPage() {
           onActivate={handleActivateScenario}
           onArchive={handleArchiveScenario}
         />
+        <TowerAdminPanel />
       </AdminPanelShell>
 
       <AdminPanelShell

@@ -84,3 +84,15 @@ def require_engineer(user: Annotated[User, Depends(get_current_user)]) -> User:
   if user.role != "engineer":
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Только для инженеров")
   return user
+
+
+def require_tower_user(user: Annotated[User, Depends(get_current_user)]) -> User:
+  if user.role not in ("faction", "commander") or not user.faction_id:
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Только для сторон Башни")
+  return user
+
+
+def require_tower_commander(user: Annotated[User, Depends(require_tower_user)]) -> User:
+  if user.role != "commander":
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Только для командования стороны")
+  return user

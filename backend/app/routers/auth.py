@@ -8,6 +8,7 @@ from app.database import get_db
 from app.lpd_channels import lpd_frequency_mhz, lpd_label
 from app.models import User
 from app.schemas import LoginRequest, TokenResponse
+from app.tower.models import Faction
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -19,6 +20,7 @@ def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]):
     raise HTTPException(status_code=401, detail="Неверный логин или пароль")
 
   token = create_access_token({"sub": user.username, "role": user.role})
+  faction = db.query(Faction).filter(Faction.id == user.faction_id).first() if user.faction_id else None
   return TokenResponse(
     access_token=token,
     user_id=user.id,
@@ -29,4 +31,7 @@ def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]):
     lpd_channel=user.lpd_channel,
     lpd_frequency_mhz=lpd_frequency_mhz(user.lpd_channel),
     lpd_label=lpd_label(user.lpd_channel),
+    faction_id=user.faction_id,
+    faction_code=faction.code if faction else None,
+    faction_name=faction.name if faction else None,
   )

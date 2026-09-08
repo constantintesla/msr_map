@@ -108,6 +108,9 @@ export interface LoginResponse {
   lpd_channel?: number | null;
   lpd_frequency_mhz?: number | null;
   lpd_label?: string | null;
+  faction_id?: number | null;
+  faction_code?: string | null;
+  faction_name?: string | null;
 }
 
 export interface GameSettings {
@@ -1340,6 +1343,313 @@ export async function fetchCommanderFieldOrders(): Promise<FieldOrder[]> {
 export async function fetchAdminFieldOrders(side?: 'A' | 'B'): Promise<FieldOrder[]> {
   const qs = side ? `?side=${side}` : '';
   const res = await authFetch(`${API_BASE}/api/admin/orders${qs}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// --- Башня: стороны, QR-раскрытие, УР, командирская консоль ---
+
+export interface TowerFactionAdmin {
+  id: number;
+  code: string;
+  name: string;
+  kind: string;
+  elder_note: string | null;
+  elder_photo_url: string | null;
+  drop_lat: number | null;
+  drop_lon: number | null;
+  join_url: string | null;
+  qr_url: string | null;
+  registered_count: number;
+}
+
+export interface TowerCommanderAdmin {
+  faction_code: string;
+  faction_name: string;
+  username: string;
+  password: string;
+}
+
+export interface TowerUrPointAdmin {
+  id: number;
+  name: string;
+  scanned: boolean;
+  qr_url: string | null;
+}
+
+export interface TowerUrZoneAdmin {
+  id: number;
+  name: string;
+  status: string;
+  hold_ends_at: string | null;
+  points: TowerUrPointAdmin[];
+}
+
+export interface TowerAdminOverview {
+  scenario_id: number;
+  factions: TowerFactionAdmin[];
+  commanders: TowerCommanderAdmin[];
+  ur_zones: TowerUrZoneAdmin[];
+  reveal_schedule: string[];
+  ur_sync_window_seconds: number;
+  ur_hold_seconds: number;
+}
+
+async function towerAdminError(res: Response, fallback: string): Promise<never> {
+  const err = await res.json().catch(() => ({}));
+  throw new Error((err as { detail?: string }).detail || fallback);
+}
+
+export async function seedTowerScenario(): Promise<TowerAdminOverview> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/seed`, { method: 'POST', headers: authHeaders() });
+  if (!res.ok) await towerAdminError(res, 'Не удалось создать сценарий «Башня»');
+  return res.json();
+}
+
+export async function fetchTowerAdminOverview(): Promise<TowerAdminOverview | null> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/overview`, { headers: authHeaders() });
+  if (res.status === 404) return null;
+  if (!res.ok) await towerAdminError(res, 'Ошибка загрузки Башни');
+  return res.json();
+}
+
+export async function updateTowerFaction(
+  factionId: number,
+  patch: { elder_note?: string; drop_lat?: number; drop_lon?: number }
+): Promise<TowerFactionAdmin> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/factions/${factionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось сохранить сторону');
+  return res.json();
+}
+
+export async function resetTowerUrZone(zoneId: number): Promise<{ ok: boolean }> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/ur-zones/${zoneId}/reset`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось сбросить УР');
+  return res.json();
+}
+
+export async function updateTowerRevealSchedule(thresholds: string[]): Promise<{ ok: boolean }> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/reveal-schedule`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ thresholds }),
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось сохранить расписание');
+  return res.json();
+}
+
+export interface TowerJoinInfo {
+  faction_code: string;
+  faction_name: string;
+}
+
+export async function fetchTowerJoinInfo(token: string): Promise<TowerJoinInfo> {
+  const res = await authFetch(`${API_BASE}/api/public/tower/join/${encodeURIComponent(token)}`);
+  if (!res.ok) await towerAdminError(res, 'Ссылка недействительна');
+  return res.json();
+}
+
+export async function registerTowerAccount(
+  token: string,
+  callsign: string,
+  pin: string
+): Promise<LoginResponse> {
+  const res = await authFetch(`${API_BASE}/api/public/tower/join/${encodeURIComponent(token)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callsign, pin }),
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось зарегистрироваться');
+  return res.json();
+}
+
+export type TowerScanResult =
+  | {
+      kind: 'village';
+      data: {
+        target_faction_code: string;
+        target_faction_name: string;
+        elder_photo_url?: string | null;
+        elder_note?: string | null;
+        drop_lat?: number | null;
+        drop_lon?: number | null;
+        cache_targets?: Array<{ name: string; lat: number; lon: number }>;
+        revealed_count?: number;
+        total_targets?: number;
+      };
+    }
+  | {
+      kind: 'ur_zone';
+      data: {
+        zone_id: number;
+        zone_name: string;
+        status: 'idle' | 'syncing' | 'holding' | 'captured';
+        sync_started_at: string | null;
+        hold_started_at: string | null;
+        hold_ends_at: string | null;
+        captured_at: string | null;
+        points: Array<{ id: number; name: string; scanned: boolean }>;
+      };
+    };
+
+export async function scanTowerToken(token?: string, code?: string): Promise<TowerScanResult> {
+  const res = await authFetch(`${API_BASE}/api/tower/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ token, code }),
+  });
+  if (!res.ok) await towerAdminError(res, 'Табличка не найдена');
+  return res.json();
+}
+
+export interface TowerUrZoneStatus {
+  zone_id: number;
+  zone_name: string;
+  status: 'idle' | 'syncing' | 'holding' | 'captured';
+  sync_started_at: string | null;
+  hold_started_at: string | null;
+  hold_ends_at: string | null;
+  captured_at: string | null;
+  points: Array<{ id: number; name: string; scanned: boolean }>;
+}
+
+export async function fetchTowerStatus(): Promise<{ ur_zones: TowerUrZoneStatus[] }> {
+  const res = await authFetch(`${API_BASE}/api/tower/status`, { headers: authHeaders() });
+  if (!res.ok) await towerAdminError(res, 'Ошибка загрузки статуса');
+  return res.json();
+}
+
+export interface TowerChatMessage {
+  id: number;
+  created_at: string;
+  faction_id: number;
+  thread: string;
+  sender_role: string;
+  sender_name: string;
+  text: string | null;
+  media_type: string | null;
+  has_media: boolean;
+  media_filename: string | null;
+  recipient_username: string | null;
+}
+
+export async function fetchTowerChatMessages(
+  thread?: 'cmd' | 'eng',
+  afterId = 0
+): Promise<{ faction_id: number; thread: string; items: TowerChatMessage[] }> {
+  const params = new URLSearchParams();
+  if (thread) params.set('thread', thread);
+  if (afterId > 0) params.set('after_id', String(afterId));
+  const qs = params.toString();
+  const res = await authFetch(`${API_BASE}/api/tower/chat/messages${qs ? `?${qs}` : ''}`, { headers: authHeaders() });
+  if (!res.ok) await towerAdminError(res, 'Ошибка чата');
+  return res.json();
+}
+
+export async function fetchTowerChatRecipients(): Promise<Array<{ username: string }>> {
+  const res = await authFetch(`${API_BASE}/api/tower/chat/recipients`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function sendTowerChatMessage(opts: {
+  text?: string;
+  thread?: 'cmd' | 'eng';
+  recipient_username?: string | null;
+}): Promise<TowerChatMessage> {
+  const form = new FormData();
+  if (opts.text) form.append('text', opts.text);
+  if (opts.thread) form.append('thread', opts.thread);
+  if (opts.recipient_username) form.append('recipient_username', opts.recipient_username);
+  const res = await authFetch(`${API_BASE}/api/tower/chat/messages`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось отправить');
+  return res.json();
+}
+
+export interface TowerOrder {
+  id: number;
+  created_at: string;
+  faction_id: number;
+  commander_username: string;
+  target_username: string;
+  target_name: string;
+  target_lat: number;
+  target_lon: number;
+  note: string | null;
+  dismissed: boolean;
+}
+
+export async function sendTowerOrder(body: {
+  target_username: string;
+  target_name: string;
+  target_lat: number;
+  target_lon: number;
+  note?: string;
+}): Promise<TowerOrder> {
+  const res = await authFetch(`${API_BASE}/api/tower/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) await towerAdminError(res, 'Ошибка отправки приказа');
+  return res.json();
+}
+
+export async function fetchTowerOrders(): Promise<TowerOrder[]> {
+  const res = await authFetch(`${API_BASE}/api/tower/orders`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchActiveTowerOrders(): Promise<TowerOrder[]> {
+  const res = await authFetch(`${API_BASE}/api/tower/orders/active`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function dismissTowerOrder(orderId: number): Promise<TowerOrder | null> {
+  const res = await authFetch(`${API_BASE}/api/tower/orders/${orderId}/dismiss`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data as { order?: TowerOrder }).order ?? null;
+}
+
+export async function pingTowerLocation(lat: number, lon: number, accuracy: number) {
+  const res = await authFetch(`${API_BASE}/api/tower/location/ping`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ lat, lon, accuracy }),
+  });
+  if (!res.ok) throw new Error('Ошибка GPS');
+  return res.json();
+}
+
+export interface TowerLocation {
+  user_id: number;
+  username: string;
+  faction_id: number;
+  lat: number;
+  lon: number;
+  accuracy: number;
+  updated_at: string;
+}
+
+export async function fetchTowerRoster(): Promise<TowerLocation[]> {
+  const res = await authFetch(`${API_BASE}/api/tower/location/roster`, { headers: authHeaders() });
   if (!res.ok) return [];
   return res.json();
 }

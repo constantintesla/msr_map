@@ -20,6 +20,9 @@ class TokenResponse(BaseModel):
   lpd_channel: int | None = None
   lpd_frequency_mhz: float | None = None
   lpd_label: str | None = None
+  faction_id: int | None = None
+  faction_code: str | None = None
+  faction_name: str | None = None
 
 
 class GameSettingsOut(BaseModel):

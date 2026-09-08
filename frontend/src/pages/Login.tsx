@@ -25,9 +25,10 @@ export default function LoginPage() {
       return redirectFrom;
     }
     if (data.role === 'admin') return '/admin';
-    if (data.role === 'commander') return '/command';
+    if (data.role === 'commander') return data.faction_id ? '/tower-command' : '/command';
     if (data.point_id) return `/point/${data.point_id}`;
     if (data.role === 'engineer') return '/engineer';
+    if (data.role === 'faction') return '/tower';
     return '/login';
   };
 
@@ -41,6 +42,9 @@ export default function LoginPage() {
       localStorage.setItem('role', data.role);
       localStorage.setItem('side', data.side || '');
       localStorage.setItem('username', u);
+      localStorage.setItem('faction_id', data.faction_id ? String(data.faction_id) : '');
+      localStorage.setItem('faction_code', data.faction_code || '');
+      localStorage.setItem('faction_name', data.faction_name || '');
 
       navigate(afterLoginPath(data), { replace: true });
     } catch {

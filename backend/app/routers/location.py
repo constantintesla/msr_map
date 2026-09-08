@@ -9,6 +9,7 @@ from app.database import get_db
 from app.lpd_channels import lpd_label
 from app.models import Cache, EngineerLocation, GameStatus, MovementTrackPoint, Point, User
 from app.services.game_service import get_or_create_game_state
+from app.services.scenario_service import get_active_scenario_id
 from app.routers import ws
 from app.schemas import EngineerLocationOut, LocationPingRequest
 
@@ -51,6 +52,7 @@ async def location_ping(
   if row is None:
     row = EngineerLocation(
       user_id=user.id,
+      scenario_id=get_active_scenario_id(db),
       username=user.username,
       side=user.side,
       label=label,
@@ -61,6 +63,7 @@ async def location_ping(
     )
     db.add(row)
   else:
+    row.scenario_id = get_active_scenario_id(db)
     row.username = user.username
     row.side = user.side
     row.label = label
@@ -107,7 +110,9 @@ def list_engineer_locations(
     raise HTTPException(status_code=400, detail="side должен быть A или B")
 
   cutoff = datetime.utcnow() - timedelta(seconds=STALE_SECONDS)
-  q = db.query(EngineerLocation).filter(EngineerLocation.updated_at >= cutoff)
+  q = db.query(EngineerLocation).filter(
+    EngineerLocation.updated_at >= cutoff, EngineerLocation.scenario_id == get_active_scenario_id(db)
+  )
   if filter_side in ("A", "B"):
     q = q.filter(EngineerLocation.side == filter_side)
 

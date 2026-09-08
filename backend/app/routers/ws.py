@@ -17,6 +17,9 @@ admin_connections: set[WebSocket] = set()
 commander_connections: dict[str, set[WebSocket]] = {"A": set(), "B": set()}
 engineer_connections: dict[str, set[WebSocket]] = {"A": set(), "B": set()}
 
+# Башня: произвольное число сторон, ключ — faction_id (не "A"/"B")
+tower_connections: dict[int, set[WebSocket]] = {}
+
 
 def _authenticate_user(token: str | None, roles: set[str]) -> User | None:
   if not token:
@@ -253,6 +256,73 @@ async def ws_commander(websocket: WebSocket, token: str | None = None):
     pass
   finally:
     commander_connections[side].discard(websocket)
+
+
+async def broadcast_tower_event(faction_id: int, packet: dict) -> None:
+  """Событие для одной стороны Башни — админам всегда, плюс участникам этой
+  стороны (командиру и игрокам вместе — один пул на faction_id; фактический
+  доступ к содержимому cmd/eng-тредов чата всё равно проверяется на GET,
+  этот пакет — только сигнал «обновись»)."""
+  await broadcast_admin_event(packet)
+  dead: list[WebSocket] = []
+  message = json.dumps(packet, ensure_ascii=False)
+  for ws in tower_connections.get(faction_id, set()):
+    try:
+      await ws.send_text(message)
+    except Exception:
+      dead.append(ws)
+  for ws in dead:
+    tower_connections.get(faction_id, set()).discard(ws)
+
+
+async def broadcast_tower_chat_event(faction_id: int, packet: dict) -> None:
+  await broadcast_tower_event(faction_id, packet)
+
+
+async def broadcast_tower_location_event(faction_id: int, packet: dict) -> None:
+  await broadcast_tower_event(faction_id, packet)
+
+
+async def broadcast_tower_order_update(faction_id: int, packet: dict) -> None:
+  await broadcast_tower_event(faction_id, packet)
+
+
+async def broadcast_tower_ur_update(packet: dict) -> None:
+  """Статус УР интересен обеим воюющим за него сторонам (СБГ и ДРГ) — шлём всем
+  подключённым Башне разом, это не приватная информация внутри стороны."""
+  await broadcast_admin_event(packet)
+  dead: list[tuple[int, WebSocket]] = []
+  message = json.dumps(packet, ensure_ascii=False)
+  for faction_id, pool in tower_connections.items():
+    for ws in pool:
+      try:
+        await ws.send_text(message)
+      except Exception:
+        dead.append((faction_id, ws))
+  for faction_id, ws in dead:
+    tower_connections.get(faction_id, set()).discard(ws)
+
+
+@router.websocket("/ws/tower")
+async def ws_tower(websocket: WebSocket, token: str | None = None):
+  """WebSocket для сторон Башни (командир и рядовые вместе, один пул на faction_id)."""
+  user = _authenticate_user(token, {"commander", "faction"})
+  if user is None or not user.faction_id:
+    await websocket.accept()
+    await websocket.close(code=4401, reason="Unauthorized")
+    return
+
+  faction_id = user.faction_id
+  await websocket.accept()
+  tower_connections.setdefault(faction_id, set()).add(websocket)
+
+  try:
+    while True:
+      await websocket.receive_text()
+  except WebSocketDisconnect:
+    pass
+  finally:
+    tower_connections.get(faction_id, set()).discard(websocket)
 
 
 @router.websocket("/ws/engineer")
