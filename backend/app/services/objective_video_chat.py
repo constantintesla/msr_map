@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models import ChatMessage, User
 from app.routers import ws
+from app.services.scenario_service import get_active_scenario_id
 
 
 def side_label(side: str) -> str:
@@ -19,6 +20,7 @@ async def publish_objective_video_chat(
   media_filename: str,
 ) -> ChatMessage:
   msg = ChatMessage(
+    scenario_id=get_active_scenario_id(db),
     side=side,
     thread="cmd",
     sender_role=user.role,

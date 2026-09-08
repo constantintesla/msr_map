@@ -15,6 +15,7 @@ interface AdminToolbarProps {
   lootPanelOpen: boolean;
   chatOpen: boolean;
   tracksOpen: boolean;
+  scenariosOpen: boolean;
   hasFilmLoot: boolean;
   onStart: () => void;
   onPause: () => void;
@@ -28,6 +29,7 @@ interface AdminToolbarProps {
   onExportLogs: () => void;
   onToggleChat: () => void;
   onToggleTracks: () => void;
+  onToggleScenarios: () => void;
   onStageChange: (stage: number) => void;
   mapEditMode: boolean;
   onToggleMapEdit: () => void;
@@ -80,6 +82,7 @@ export default function AdminToolbar({
   lootPanelOpen,
   chatOpen,
   tracksOpen,
+  scenariosOpen,
   hasFilmLoot,
   onStart,
   onPause,
@@ -93,6 +96,7 @@ export default function AdminToolbar({
   onExportLogs,
   onToggleChat,
   onToggleTracks,
+  onToggleScenarios,
   onStageChange,
   mapEditMode,
   onToggleMapEdit,
@@ -362,6 +366,16 @@ export default function AdminToolbar({
           <button type="button" className="btn border border-zinc-600 text-sm" onClick={onExportLogs}>
             CSV
           </button>
+          <button
+            type="button"
+            className={`btn text-sm border ${scenariosOpen ? 'border-sideA bg-sideA/20 text-sideA' : 'border-zinc-600'}`}
+            onClick={() => {
+              onToggleScenarios();
+              setMobileMenuOpen(false);
+            }}
+          >
+            Мероприятия
+          </button>
         </div>
       </div>
 
@@ -509,6 +523,16 @@ export default function AdminToolbar({
           </button>
           <button type="button" className="btn border border-zinc-600 text-sm" onClick={onExportLogs}>
             CSV лог
+          </button>
+          <button
+            type="button"
+            className={`btn text-sm border ${scenariosOpen ? 'border-sideA bg-sideA/20 text-sideA' : 'border-zinc-600'}`}
+            onClick={() => {
+              onToggleScenarios();
+              setMobileMenuOpen(false);
+            }}
+          >
+            {scenariosOpen ? 'Скрыть мероприятия' : 'Мероприятия'}
           </button>
         </ToolGroup>
       </div>

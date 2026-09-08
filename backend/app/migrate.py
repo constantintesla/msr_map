@@ -133,6 +133,25 @@ def run_migrations() -> None:
   _add_column_if_missing("points", "qr_token", "ALTER TABLE points ADD COLUMN qr_token VARCHAR(24)")
   _add_column_if_missing("caches", "qr_token", "ALTER TABLE caches ADD COLUMN qr_token VARCHAR(24)")
   _add_column_if_missing("caches", "code_verified_qr_token", "ALTER TABLE caches ADD COLUMN code_verified_qr_token VARCHAR(24)")
+  for table in (
+    "points",
+    "caches",
+    "landmarks",
+    "hold_sessions",
+    "cache_hold_sessions",
+    "point_recon_photos",
+    "stage2_assignments",
+    "chat_messages",
+    "field_orders",
+    "movement_track_points",
+  ):
+    _add_column_if_missing(
+      table, "scenario_id", f"ALTER TABLE {table} ADD COLUMN scenario_id INTEGER DEFAULT 1"
+    )
+  _add_column_if_missing("event_log", "scenario_id", "ALTER TABLE event_log ADD COLUMN scenario_id INTEGER")
+  _ensure_default_scenario()
+  _backfill_scenario_ids()
+  _ensure_active_scenario_unique_index()
   _backfill_engineer_passwords()
   _ensure_demo_engineer_passwords()
   _backfill_stage1_point_codes()
@@ -140,6 +159,57 @@ def run_migrations() -> None:
   _backfill_qr_tokens()
   _dedupe_active_holds()
   _ensure_active_hold_unique_indexes()
+
+
+def _ensure_default_scenario() -> None:
+  """Гарантирует наличие Scenario(id=1) — «Мероприятие 1» — для бэкофилла старых данных."""
+  from app.database import SessionLocal
+  from app.models import GameState, Scenario
+
+  db = SessionLocal()
+  try:
+    if db.query(Scenario).count() > 0:
+      return
+    scenario = Scenario(id=1, name="Мероприятие 1", slug="default", is_active=True)
+    db.add(scenario)
+    db.flush()
+    if db.query(GameState).filter(GameState.id == 1).first() is None:
+      db.add(GameState(id=1))
+    db.commit()
+  finally:
+    db.close()
+
+
+def _backfill_scenario_ids() -> None:
+  """Существующие строки (до введения сценариев) относим к Scenario(id=1)."""
+  tables = (
+    "points",
+    "caches",
+    "landmarks",
+    "hold_sessions",
+    "cache_hold_sessions",
+    "point_recon_photos",
+    "stage2_assignments",
+    "chat_messages",
+    "field_orders",
+    "movement_track_points",
+    "event_log",
+  )
+  with engine.begin() as conn:
+    for table in tables:
+      conn.execute(text(f"UPDATE {table} SET scenario_id = 1 WHERE scenario_id IS NULL"))
+
+
+def _ensure_active_scenario_unique_index() -> None:
+  """Не более одного активного сценария одновременно."""
+  active_literal = _bool_default(True)
+  with engine.begin() as conn:
+    conn.execute(
+      text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_scenarios_active "
+        f"ON scenarios(is_active) WHERE is_active = {active_literal}"
+      )
+    )
 
 
 def _ensure_demo_engineer_passwords() -> None:

@@ -18,6 +18,19 @@ class GameStatus(str, Enum):
   PAUSED = "paused"
 
 
+class Scenario(Base):
+  """Мероприятие: изолированный набор точек/схронов/настроек/состояния игры."""
+  __tablename__ = "scenarios"
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  name: Mapped[str] = mapped_column(String(128))
+  slug: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+  is_active: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+  kmz_source: Mapped[str | None] = mapped_column(String(255), nullable=True)
+  created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+  archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class User(Base):
   __tablename__ = "users"
 
@@ -36,6 +49,7 @@ class Point(Base):
   __tablename__ = "points"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   name: Mapped[str] = mapped_column(String(128))
   lat: Mapped[float] = mapped_column(Float)
   lon: Mapped[float] = mapped_column(Float)
@@ -57,6 +71,7 @@ class Cache(Base):
   __tablename__ = "caches"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   name: Mapped[str] = mapped_column(String(128))
   lat: Mapped[float] = mapped_column(Float)
   lon: Mapped[float] = mapped_column(Float)
@@ -86,6 +101,7 @@ class CacheHoldSession(Base):
   __tablename__ = "cache_hold_sessions"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   cache_id: Mapped[int] = mapped_column(Integer, ForeignKey("caches.id"))
   side: Mapped[str] = mapped_column(String(1))
   started_at: Mapped[datetime] = mapped_column(DateTime)
@@ -102,6 +118,7 @@ class Landmark(Base):
   __tablename__ = "landmarks"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   name: Mapped[str] = mapped_column(String(128))
   lat: Mapped[float] = mapped_column(Float)
   lon: Mapped[float] = mapped_column(Float)
@@ -115,6 +132,7 @@ class PointReconPhoto(Base):
   __tablename__ = "point_recon_photos"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   point_id: Mapped[int] = mapped_column(Integer, ForeignKey("points.id"))
   side: Mapped[str] = mapped_column(String(1))
   user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
@@ -127,6 +145,7 @@ class HoldSession(Base):
   __tablename__ = "hold_sessions"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   point_id: Mapped[int] = mapped_column(Integer, ForeignKey("points.id"))
   side: Mapped[str] = mapped_column(String(1))
   started_at: Mapped[datetime] = mapped_column(DateTime)
@@ -140,9 +159,10 @@ class HoldSession(Base):
 
 
 class GameState(Base):
+  """1:1 со Scenario — id совпадает с id активного/дормантного сценария."""
   __tablename__ = "game_state"
 
-  id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+  id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), primary_key=True)
   status: Mapped[str] = mapped_column(String(16), default=GameStatus.IDLE.value)
   started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
   paused_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -181,6 +201,7 @@ class MovementTrackPoint(Base):
   __tablename__ = "movement_track_points"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   game_session_id: Mapped[int] = mapped_column(Integer, index=True)
   user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
   username: Mapped[str] = mapped_column(String(64))
@@ -197,6 +218,7 @@ class Stage2Assignment(Base):
   __tablename__ = "stage2_assignments"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   cache_id: Mapped[int] = mapped_column(Integer, ForeignKey("caches.id"))
   assigned_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
   round_number: Mapped[int] = mapped_column(Integer, default=1)
@@ -206,6 +228,7 @@ class EventLog(Base):
   __tablename__ = "event_log"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("scenarios.id"), nullable=True, index=True)
   created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
   event_type: Mapped[str] = mapped_column(String(64))
   payload: Mapped[str] = mapped_column(Text, default="{}")
@@ -216,6 +239,7 @@ class ChatMessage(Base):
   __tablename__ = "chat_messages"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
   side: Mapped[str] = mapped_column(String(1))  # A | B
   thread: Mapped[str] = mapped_column(String(8), default="cmd")  # cmd | eng
@@ -247,6 +271,7 @@ class FieldOrder(Base):
   __tablename__ = "field_orders"
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True, default=1)
   created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
   side: Mapped[str] = mapped_column(String(1))
   commander_username: Mapped[str] = mapped_column(String(64))

@@ -10,6 +10,7 @@ from app.models import FieldOrder, User
 from app.routers import ws
 from app.schemas import EngineerProfileOut, FieldOrderDismissResponse, FieldOrderOut
 from app.services.field_order_service import field_order_ws_packet, order_to_out
+from app.services.scenario_service import get_active_scenario_id
 
 router = APIRouter(prefix="/api/engineer", tags=["engineer"])
 
@@ -40,7 +41,11 @@ def engineer_active_orders(
 ):
   rows = (
     db.query(FieldOrder)
-    .filter(FieldOrder.engineer_user_id == user.id, FieldOrder.dismissed_at.is_(None))
+    .filter(
+      FieldOrder.scenario_id == get_active_scenario_id(db),
+      FieldOrder.engineer_user_id == user.id,
+      FieldOrder.dismissed_at.is_(None),
+    )
     .order_by(FieldOrder.created_at.desc())
     .limit(5)
     .all()

@@ -1037,6 +1037,57 @@ export async function fetchGameSettings(): Promise<GameSettings> {
   return res.json();
 }
 
+export interface Scenario {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export async function fetchScenarios(): Promise<Scenario[]> {
+  const res = await authFetch(`${API_BASE}/api/admin/scenarios`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Ошибка загрузки сценариев');
+  return res.json();
+}
+
+export async function createScenario(name: string): Promise<Scenario> {
+  const res = await authFetch(`${API_BASE}/api/admin/scenarios`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail || 'Не удалось создать сценарий');
+  }
+  return res.json();
+}
+
+export async function activateScenario(scenarioId: number): Promise<Scenario> {
+  const res = await authFetch(`${API_BASE}/api/admin/scenarios/${scenarioId}/activate`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail || 'Не удалось переключить сценарий');
+  }
+  return res.json();
+}
+
+export async function archiveScenario(scenarioId: number): Promise<Scenario> {
+  const res = await authFetch(`${API_BASE}/api/admin/scenarios/${scenarioId}/archive`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail || 'Не удалось архивировать сценарий');
+  }
+  return res.json();
+}
+
 const SETTINGS_FIELD_LABELS: Record<string, string> = {
   engineers_per_side_a: 'ЛК (A)',
   engineers_per_side_b: 'СБГ (B)',

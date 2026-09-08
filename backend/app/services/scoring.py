@@ -73,9 +73,13 @@ def calculate_score_breakdown(db: Session, game: GameState) -> ScoreBreakdown:
     return bd
 
   now = datetime.utcnow()
-  points = {p.id: p for p in db.query(Point).filter(Point.stage != 2).all()}
+  scenario_id = game.id
+  points = {
+    p.id: p
+    for p in db.query(Point).filter(Point.scenario_id == scenario_id, Point.stage != 2).all()
+  }
 
-  for session in db.query(HoldSession).all():
+  for session in db.query(HoldSession).filter(HoldSession.scenario_id == scenario_id).all():
     point = points.get(session.point_id)
     if point is None:
       continue
@@ -88,7 +92,7 @@ def calculate_score_breakdown(db: Session, game: GameState) -> ScoreBreakdown:
     if point.stage == 1 and session.hold_ready and session.ended_at:
       side_bd.captures += int(POINT_CAPTURE_BONUS * coef)
 
-  for cache in db.query(Cache).filter(Cache.destroyed.is_(True)).all():
+  for cache in db.query(Cache).filter(Cache.scenario_id == scenario_id, Cache.destroyed.is_(True)).all():
     if cache.cache_kind == "film_loot":
       if cache.delivered_at:
         side = cache.delivered_by_side
@@ -101,7 +105,11 @@ def calculate_score_breakdown(db: Session, game: GameState) -> ScoreBreakdown:
     elif cache.destroyed_by_side in ("A", "B"):
       _side_breakdown(bd, cache.destroyed_by_side).caches += CACHE_DESTROY_BONUS
 
-  for post in db.query(Point).filter(Point.destroyed.is_(True), Point.stage == 3).all():
+  for post in (
+    db.query(Point)
+    .filter(Point.scenario_id == scenario_id, Point.destroyed.is_(True), Point.stage == 3)
+    .all()
+  ):
     if post.destroyed_by_side in ("A", "B"):
       _side_breakdown(bd, post.destroyed_by_side).posts += POST_DESTROY_BONUS
 

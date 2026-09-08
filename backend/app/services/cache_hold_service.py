@@ -52,6 +52,7 @@ def confirm_cache_hold(db: Session, cache_id: int, side: str) -> CacheHoldSessio
   session = get_active_cache_hold(db, cache_id)
   if session is None:
     session = CacheHoldSession(
+      scenario_id=cache.scenario_id,
       cache_id=cache_id,
       side=side,
       started_at=now,
@@ -115,11 +116,17 @@ def force_release_cache_hold(db: Session, cache_id: int) -> CacheHoldSession | N
 
 
 def close_expired_cache_holds(db: Session) -> list[CacheHoldSession]:
+  from app.services.scenario_service import get_active_scenario_id
+
   dm = cache_hold_deadman_seconds(db)
   deadline = datetime.utcnow() - timedelta(seconds=dm)
   expired = (
     db.query(CacheHoldSession)
-    .filter(CacheHoldSession.active.is_(True), CacheHoldSession.last_ping_at < deadline)
+    .filter(
+      CacheHoldSession.scenario_id == get_active_scenario_id(db),
+      CacheHoldSession.active.is_(True),
+      CacheHoldSession.last_ping_at < deadline,
+    )
     .all()
   )
 

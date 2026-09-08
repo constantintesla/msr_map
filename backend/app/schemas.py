@@ -422,6 +422,18 @@ class AdminActionResponse(BaseModel):
   message: str
 
 
+class ScenarioOut(BaseModel):
+  id: int
+  name: str
+  slug: str
+  is_active: bool
+  created_at: datetime
+
+
+class ScenarioCreate(BaseModel):
+  name: str = Field(min_length=1, max_length=128)
+
+
 class BulkMapEnabledRequest(BaseModel):
   enabled: bool
   points: bool = True

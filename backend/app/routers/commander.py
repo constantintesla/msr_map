@@ -24,6 +24,7 @@ from app.services.field_order_service import create_field_order, field_order_ws_
 from app.qr_tokens import ensure_cache_qr_token, ensure_point_qr_token, qr_entry_url
 from app.services.game_service import get_or_create_game_state
 from app.services.hold_service import refresh_active_hold_progress
+from app.services.scenario_service import get_active_scenario_id
 from app.services.stage2_assignment_service import get_active_stage2_cache, is_stage2_active
 from app.services.status_service import build_status_response
 
@@ -189,7 +190,7 @@ def commander_list_orders(
   side = user.side or "A"
   rows = (
     db.query(FieldOrder)
-    .filter(FieldOrder.side == side)
+    .filter(FieldOrder.scenario_id == get_active_scenario_id(db), FieldOrder.side == side)
     .order_by(FieldOrder.created_at.desc())
     .limit(min(limit, 100))
     .all()

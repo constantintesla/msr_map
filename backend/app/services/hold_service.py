@@ -119,9 +119,13 @@ def maybe_complete_hold(
   return "point_hold_ready"
 
 
-def reconcile_stage1_captured_sessions(db: Session) -> None:
+def reconcile_stage1_captured_sessions(db: Session, scenario_id: int) -> None:
   """Закрыть зависшие сессии у уже захваченных КТ (после смены логики)."""
-  points = db.query(Point).filter(Point.stage == 1, Point.side.isnot(None)).all()
+  points = (
+    db.query(Point)
+    .filter(Point.scenario_id == scenario_id, Point.stage == 1, Point.side.isnot(None))
+    .all()
+  )
   if not points:
     return
   changed = False
@@ -139,9 +143,13 @@ def reconcile_stage1_captured_sessions(db: Session) -> None:
 
 def refresh_active_hold_progress(db: Session) -> list[dict]:
   """Проверить все активные удержания и завершить захват по таймеру."""
-  reconcile_stage1_captured_sessions(db)
   game = get_or_create_game_state(db)
-  active = db.query(HoldSession).filter(HoldSession.active.is_(True)).all()
+  reconcile_stage1_captured_sessions(db, game.id)
+  active = (
+    db.query(HoldSession)
+    .filter(HoldSession.scenario_id == game.id, HoldSession.active.is_(True))
+    .all()
+  )
   if not active:
     return []
 
@@ -227,6 +235,7 @@ def confirm_hold(
 
       assert_stage1_capturable(point, game)
     session = HoldSession(
+      scenario_id=point.scenario_id,
       point_id=point_id,
       side=side,
       user_id=user_id,
@@ -301,7 +310,11 @@ def close_expired_holds(db: Session) -> list[HoldSession]:
 
   game = get_or_create_game_state(db)
   now = datetime.utcnow()
-  active = db.query(HoldSession).filter(HoldSession.active.is_(True)).all()
+  active = (
+    db.query(HoldSession)
+    .filter(HoldSession.scenario_id == game.id, HoldSession.active.is_(True))
+    .all()
+  )
   point_ids = {s.point_id for s in active}
   points = {p.id: p for p in db.query(Point).filter(Point.id.in_(point_ids)).all()} if point_ids else {}
 

@@ -129,6 +129,15 @@ async def broadcast_game_state(status: str) -> None:
     await broadcast_engineer_event(side, packet)
 
 
+async def broadcast_scenario_switched(scenario_id: int) -> None:
+  """Активный сценарий сменился — клиенты должны полностью перезагрузить статус."""
+  packet = {"e": "scenario_switched", "scenario_id": scenario_id}
+  await broadcast_admin_event(packet)
+  for side in ("A", "B"):
+    await broadcast_commander_event(side, packet)
+    await broadcast_engineer_event(side, packet)
+
+
 async def broadcast_settings_update() -> None:
   """Настройки изменены — клиенты обновляют статус."""
   packet = {"e": "settings_update"}

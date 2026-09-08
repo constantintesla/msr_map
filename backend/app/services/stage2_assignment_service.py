@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Cache, GameState, GameStatus, Stage2Assignment
 from app.services.game_service import get_or_create_game_state, log_event
+from app.services.scenario_service import get_active_scenario_id
 
 
 def is_stage2_active(game: GameState) -> bool:
@@ -15,7 +16,12 @@ def is_stage2_active(game: GameState) -> bool:
 def get_all_film_loot_ids(db: Session) -> list[int]:
   rows = (
     db.query(Cache.id)
-    .filter(Cache.stage == 2, Cache.cache_kind == "film_loot", Cache.enabled.is_(True))
+    .filter(
+      Cache.scenario_id == get_active_scenario_id(db),
+      Cache.stage == 2,
+      Cache.cache_kind == "film_loot",
+      Cache.enabled.is_(True),
+    )
     .order_by(Cache.id)
     .all()
   )
@@ -27,7 +33,9 @@ def get_active_stage2_cache_id(db: Session) -> int | None:
   row = (
     db.query(Stage2Assignment.cache_id)
     .join(Cache, Cache.id == Stage2Assignment.cache_id)
-    .filter(Cache.delivered_at.is_(None))
+    .filter(
+      Stage2Assignment.scenario_id == get_active_scenario_id(db), Cache.delivered_at.is_(None)
+    )
     .order_by(Stage2Assignment.round_number.desc())
     .first()
   )
@@ -42,7 +50,11 @@ def get_active_stage2_cache(db: Session) -> Cache | None:
 
 
 def get_issued_cache_ids(db: Session) -> set[int]:
-  rows = db.query(Stage2Assignment.cache_id).all()
+  rows = (
+    db.query(Stage2Assignment.cache_id)
+    .filter(Stage2Assignment.scenario_id == get_active_scenario_id(db))
+    .all()
+  )
   return {r[0] for r in rows}
 
 
@@ -55,8 +67,13 @@ def is_cache_issued(db: Session, cache_id: int) -> bool:
   )
 
 
-def _next_round_number(db: Session) -> int:
-  last = db.query(Stage2Assignment).order_by(Stage2Assignment.round_number.desc()).first()
+def _next_round_number(db: Session, scenario_id: int) -> int:
+  last = (
+    db.query(Stage2Assignment)
+    .filter(Stage2Assignment.scenario_id == scenario_id)
+    .order_by(Stage2Assignment.round_number.desc())
+    .first()
+  )
   return (last.round_number if last else 0) + 1
 
 
@@ -89,9 +106,10 @@ def issue_next_assignment(db: Session) -> Stage2Assignment | None:
   cache = db.query(Cache).filter(Cache.id == cache_id).first()
   now = datetime.utcnow()
   assignment = Stage2Assignment(
+    scenario_id=game.id,
     cache_id=cache_id,
     assigned_at=now,
-    round_number=_next_round_number(db),
+    round_number=_next_round_number(db, game.id),
   )
   db.add(assignment)
   game.stage2_last_issued_at = now
@@ -162,7 +180,7 @@ def enable_stage2_now(db: Session) -> GameState:
 
 def reset_stage2_assignments(db: Session) -> None:
   game = get_or_create_game_state(db)
-  db.query(Stage2Assignment).delete()
+  db.query(Stage2Assignment).filter(Stage2Assignment.scenario_id == game.id).delete()
   game.stage2_last_issued_at = None
   game.stage2_sequential_index = 0
   game.stage2_enabled = False

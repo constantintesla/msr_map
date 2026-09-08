@@ -73,6 +73,7 @@ async def location_ping(
   if game.started_at and game.status in (GameStatus.RUNNING.value, GameStatus.PAUSED.value):
     db.add(
       MovementTrackPoint(
+        scenario_id=game.id,
         game_session_id=game.game_session_id or 1,
         user_id=user.id,
         username=user.username,

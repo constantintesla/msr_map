@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.migrate import run_migrations
-from app.routers import admin, auth, cache, chat, commander, engineer, hold, location, map_grid, point, qr, status, ws
+from app.routers import admin, auth, cache, chat, commander, engineer, hold, location, map_grid, point, qr, scenarios, status, ws
 from app.seed import seed_database
 from app.services.cache_hold_service import close_expired_cache_holds
 from app.services.hold_service import close_expired_holds
@@ -83,6 +83,7 @@ app.include_router(hold.router)
 app.include_router(cache.router)
 app.include_router(point.router)
 app.include_router(admin.router)
+app.include_router(scenarios.router)
 app.include_router(map_grid.router)
 app.include_router(qr.router)
 app.include_router(ws.router)

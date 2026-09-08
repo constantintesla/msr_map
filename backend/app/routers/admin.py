@@ -60,6 +60,7 @@ from app.services.capture_settings import (
 from app.services.engineer_pool_service import list_pool_engineers, sync_engineer_pool
 from app.services.field_order_service import order_to_out
 from app.services.game_service import get_or_create_game_state, log_event, pause_game, reset_game, set_stage, start_game
+from app.services.scenario_service import get_active_scenario_id
 from app.services.stage1_schedule_service import (
   get_active_kt_numbers,
   get_stage1_phase,
@@ -346,7 +347,9 @@ async def admin_kmz_import(
   if not points and not caches and not landmarks:
     raise HTTPException(status_code=400, detail="KML/KMZ не содержит объектов")
 
-  n_pts, n_cch, n_lm = apply_game_objects(db, points, caches, landmarks, source=filename)
+  n_pts, n_cch, n_lm = apply_game_objects(
+    db, points, caches, landmarks, scenario_id=get_active_scenario_id(db), source=filename
+  )
   return AdminActionResponse(
     ok=True,
     message=f"Импортировано: {n_pts} точек, {n_cch} схронов, {n_lm} баз/стартов",
@@ -387,7 +390,7 @@ def admin_kml_reload(
       status_code=404,
       detail="Каталог kmz/ не найден. Смонтируйте ./kmz в контейнер (см. docker-compose.yml).",
     )
-  result = load_kmz_dir_into_db(db, kmz_dir)
+  result = load_kmz_dir_into_db(db, kmz_dir, get_active_scenario_id(db))
   if result is None:
     raise HTTPException(status_code=404, detail=f"KML не найден в {kmz_dir}")
   n_pts, n_cch, n_lm = result
@@ -442,13 +445,22 @@ def _stage3_mertvyak_item(cache: Cache, db: Session) -> dict:
 def _get_stage2_film_loot(db: Session, cache_id: int) -> Cache | None:
   return (
     db.query(Cache)
-    .filter(Cache.id == cache_id, Cache.stage == 2, Cache.cache_kind == "film_loot")
+    .filter(
+      Cache.id == cache_id,
+      Cache.scenario_id == get_active_scenario_id(db),
+      Cache.stage == 2,
+      Cache.cache_kind == "film_loot",
+    )
     .first()
   )
 
 
 def _get_stage1_point(db: Session, point_id: int) -> Point | None:
-  return db.query(Point).filter(Point.id == point_id, Point.stage == 1).first()
+  return (
+    db.query(Point)
+    .filter(Point.id == point_id, Point.scenario_id == get_active_scenario_id(db), Point.stage == 1)
+    .first()
+  )
 
 
 @router.get("/stage1/mission", response_model=list[Stage2MissionItem])
@@ -457,7 +469,13 @@ def admin_stage1_mission(
   _: Annotated[User, Depends(require_admin)],
 ):
   """КТ этапа 1: QR, коды для табличек."""
-  points = db.query(Point).filter(Point.stage == 1).order_by(Point.id).all()
+  scenario_id = get_active_scenario_id(db)
+  points = (
+    db.query(Point)
+    .filter(Point.scenario_id == scenario_id, Point.stage == 1)
+    .order_by(Point.id)
+    .all()
+  )
   out = [_stage1_mission_item(p, db) for p in points]
   db.commit()
   return out
@@ -488,7 +506,9 @@ def admin_stage2_mission(
   """Координаты и коды всех 10 ящиков — раздача штабом обеим сторонам."""
   boxes = (
     db.query(Cache)
-    .filter(Cache.stage == 2, Cache.cache_kind == "film_loot")
+    .filter(
+      Cache.scenario_id == get_active_scenario_id(db), Cache.stage == 2, Cache.cache_kind == "film_loot"
+    )
     .order_by(Cache.id)
     .all()
   )
@@ -615,7 +635,12 @@ def admin_stage2_assignments(
   db: Annotated[Session, Depends(get_db)],
   _: Annotated[User, Depends(require_admin)],
 ):
-  rows = db.query(Stage2Assignment).order_by(Stage2Assignment.assigned_at.desc()).all()
+  rows = (
+    db.query(Stage2Assignment)
+    .filter(Stage2Assignment.scenario_id == get_active_scenario_id(db))
+    .order_by(Stage2Assignment.assigned_at.desc())
+    .all()
+  )
   out: list[Stage2AssignmentItem] = []
   for row in rows:
     cache = db.query(Cache).filter(Cache.id == row.cache_id).first()
@@ -642,7 +667,9 @@ def admin_stage3_mertvyaki(
 ):
   items = (
     db.query(Cache)
-    .filter(Cache.stage == 3, Cache.cache_kind == "mertvyak")
+    .filter(
+      Cache.scenario_id == get_active_scenario_id(db), Cache.stage == 3, Cache.cache_kind == "mertvyak"
+    )
     .order_by(Cache.id)
     .all()
   )
@@ -660,7 +687,12 @@ def admin_stage3_mertvyak_update(
 ):
   cache = (
     db.query(Cache)
-    .filter(Cache.id == cache_id, Cache.stage == 3, Cache.cache_kind == "mertvyak")
+    .filter(
+      Cache.id == cache_id,
+      Cache.scenario_id == get_active_scenario_id(db),
+      Cache.stage == 3,
+      Cache.cache_kind == "mertvyak",
+    )
     .first()
   )
   if cache is None:
@@ -684,7 +716,14 @@ def admin_events(
   import json
 
   items = []
-  for entry in db.query(EventLog).order_by(EventLog.id.desc()).limit(80).all():
+  scenario_id = get_active_scenario_id(db)
+  for entry in (
+    db.query(EventLog)
+    .filter(EventLog.scenario_id == scenario_id)
+    .order_by(EventLog.id.desc())
+    .limit(80)
+    .all()
+  ):
     try:
       payload = json.loads(entry.payload or "{}")
     except json.JSONDecodeError:
@@ -710,7 +749,10 @@ def admin_export_logs(
   writer = csv.writer(output)
   writer.writerow(["id", "created_at", "event_type", "payload"])
 
-  for entry in db.query(EventLog).order_by(EventLog.id).all():
+  scenario_id = get_active_scenario_id(db)
+  for entry in (
+    db.query(EventLog).filter(EventLog.scenario_id == scenario_id).order_by(EventLog.id).all()
+  ):
     writer.writerow([entry.id, entry.created_at.isoformat(), entry.event_type, entry.payload])
 
   gz_buffer = io.BytesIO()
@@ -759,9 +801,7 @@ def admin_export_movement_tracks(
   db: Annotated[Session, Depends(get_db)],
   _: Annotated[User, Depends(require_admin)],
 ):
-  game = db.query(GameState).filter(GameState.id == 1).first()
-  if game is None:
-    game = GameState(id=1)
+  game = get_or_create_game_state(db)
   rows = session_track_rows(db, game)
 
   output = io.StringIO()
@@ -799,7 +839,7 @@ def admin_get_settings(
   db: Annotated[Session, Depends(get_db)],
   _: Annotated[User, Depends(require_admin)],
 ):
-  gs = db.query(GameState).filter(GameState.id == 1).first()
+  gs = db.query(GameState).filter(GameState.id == get_active_scenario_id(db)).first()
   a_target = gs.engineers_per_side_a if gs else 5
   b_target = gs.engineers_per_side_b if gs else 5
   count_a = db.query(User).filter(User.role == "engineer", User.side == "A", User.username.like("eng_a%")).count()
@@ -835,9 +875,10 @@ async def admin_update_settings(
   db: Annotated[Session, Depends(get_db)],
   _: Annotated[User, Depends(require_admin)],
 ):
-  gs = db.query(GameState).filter(GameState.id == 1).first()
+  scenario_id = get_active_scenario_id(db)
+  gs = db.query(GameState).filter(GameState.id == scenario_id).first()
   if gs is None:
-    gs = GameState(id=1)
+    gs = GameState(id=scenario_id)
     db.add(gs)
   gs.engineers_per_side_a = body.engineers_per_side_a
   gs.engineers_per_side_b = body.engineers_per_side_b
@@ -899,9 +940,10 @@ def admin_gps_calibrate(
   _: Annotated[User, Depends(require_admin)],
 ):
   """Записать глобальное смещение GPS: true_coords - measured_coords."""
-  gs = db.query(GameState).filter(GameState.id == 1).first()
+  scenario_id = get_active_scenario_id(db)
+  gs = db.query(GameState).filter(GameState.id == scenario_id).first()
   if gs is None:
-    gs = GameState(id=1)
+    gs = GameState(id=scenario_id)
     db.add(gs)
   gs.gps_lat_offset = body.true_lat - body.measured_lat
   gs.gps_lon_offset = body.true_lon - body.measured_lon
@@ -979,14 +1021,27 @@ async def admin_bulk_map_enabled(
   _: Annotated[User, Depends(require_admin)],
 ):
   parts: list[str] = []
+  scenario_id = get_active_scenario_id(db)
   if body.points:
-    n = db.query(Point).update({Point.enabled: body.enabled}, synchronize_session=False)
+    n = (
+      db.query(Point)
+      .filter(Point.scenario_id == scenario_id)
+      .update({Point.enabled: body.enabled}, synchronize_session=False)
+    )
     parts.append(f"КТ: {n}")
   if body.caches:
-    n = db.query(Cache).update({Cache.enabled: body.enabled}, synchronize_session=False)
+    n = (
+      db.query(Cache)
+      .filter(Cache.scenario_id == scenario_id)
+      .update({Cache.enabled: body.enabled}, synchronize_session=False)
+    )
     parts.append(f"схроны: {n}")
   if body.landmarks:
-    n = db.query(Landmark).update({Landmark.enabled: body.enabled}, synchronize_session=False)
+    n = (
+      db.query(Landmark)
+      .filter(Landmark.scenario_id == scenario_id)
+      .update({Landmark.enabled: body.enabled}, synchronize_session=False)
+    )
     parts.append(f"базы/старты: {n}")
   log_event(
     db,
@@ -1194,7 +1249,7 @@ def admin_list_orders(
   side: str | None = None,
   limit: int = 50,
 ):
-  q = db.query(FieldOrder)
+  q = db.query(FieldOrder).filter(FieldOrder.scenario_id == get_active_scenario_id(db))
   if side in ("A", "B"):
     q = q.filter(FieldOrder.side == side)
   rows = q.order_by(FieldOrder.created_at.desc()).limit(min(limit, 100)).all()

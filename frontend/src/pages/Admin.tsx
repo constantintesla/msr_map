@@ -33,10 +33,15 @@ import {
   updateMapLandmark,
   createMapLandmark,
   deleteMapLandmark,
+  fetchScenarios,
+  createScenario,
+  activateScenario,
+  archiveScenario,
   type StatusData,
   type EngineerLocation,
   type GameSettings,
   type Stage2Assignment,
+  type Scenario,
 } from '../api/client';
 import ChatPanel from '../components/ChatPanel';
 import FieldOrdersPanel from '../components/FieldOrdersPanel';
@@ -47,6 +52,7 @@ import AdminMapEditorBar from '../components/admin/AdminMapEditorBar';
 import AdminPanelShell from '../components/admin/AdminPanelShell';
 import AdminQuickNav from '../components/admin/AdminQuickNav';
 import AdminTracksPanel from '../components/admin/AdminTracksPanel';
+import ScenarioSwitcher from '../components/admin/ScenarioSwitcher';
 import MobileSheet from '../components/MobileSheet';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { adminSocketHub } from '../ws/hubs';
@@ -130,6 +136,10 @@ export default function AdminPage() {
     calibrateMeasuredLon: '',
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [scenariosOpen, setScenariosOpen] = useState(false);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [scenariosLoading, setScenariosLoading] = useState(false);
+  const [scenariosError, setScenariosError] = useState('');
   const [stage2Assignments, setStage2Assignments] = useState<Stage2Assignment[]>([]);
   const [stage2IssueLoading, setStage2IssueLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
@@ -197,6 +207,17 @@ export default function AdminPage() {
       .catch(() => {});
   }, []);
 
+  const loadScenarios = useCallback(() => {
+    setScenariosLoading(true);
+    fetchScenarios()
+      .then((list) => {
+        setScenarios(list);
+        setScenariosError('');
+      })
+      .catch((e) => setScenariosError(e instanceof Error ? e.message : 'Ошибка загрузки сценариев'))
+      .finally(() => setScenariosLoading(false));
+  }, []);
+
   const load = useCallback(() => {
     return fetchAdminStatus()
       .then((d) => {
@@ -212,6 +233,10 @@ export default function AdminPage() {
   loadEngineersRef.current = loadEngineers;
   const loadStage2AssignmentsRef = useRef(loadStage2Assignments);
   loadStage2AssignmentsRef.current = loadStage2Assignments;
+  const loadSettingsRef = useRef(loadSettings);
+  loadSettingsRef.current = loadSettings;
+  const loadScenariosRef = useRef(loadScenarios);
+  loadScenariosRef.current = loadScenarios;
 
   useEffect(() => {
     load();
@@ -249,6 +274,16 @@ export default function AdminPage() {
       if (packet.e === 'cache_detonate' && packet.p_id) {
         setExplosionCacheId(packet.p_id as number);
         setTimeout(() => setExplosionCacheId(null), 1500);
+      }
+      if (packet.e === 'scenario_switched') {
+        loadRef.current();
+        loadSettingsRef.current();
+        loadEngineersRef.current();
+        loadScenariosRef.current();
+        setMapSelection(null);
+        setMission([]);
+        setMissionOpen(false);
+        setLootPanelOpen(false);
       }
       if (
         packet.e === 'hold_expired' ||
@@ -512,7 +547,61 @@ export default function AdminPage() {
     }
     setMissionOpen(false);
     setLootPanelOpen(false);
+    setScenariosOpen(false);
     setSettingsOpen(true);
+  };
+
+  const toggleScenarios = () => {
+    if (scenariosOpen) {
+      setScenariosOpen(false);
+      return;
+    }
+    setMissionOpen(false);
+    setLootPanelOpen(false);
+    setSettingsOpen(false);
+    setScenariosOpen(true);
+    loadScenarios();
+  };
+
+  const handleCreateScenario = async (name: string) => {
+    try {
+      await createScenario(name);
+      setScenariosError('');
+      loadScenarios();
+    } catch (e) {
+      setScenariosError(e instanceof Error ? e.message : 'Не удалось создать сценарий');
+    }
+  };
+
+  const handleActivateScenario = async (id: number) => {
+    if (
+      !window.confirm(
+        'Переключить активный сценарий? Текущие приказы и позиции инженеров на карте будут сброшены.',
+      )
+    ) {
+      return;
+    }
+    try {
+      await activateScenario(id);
+      setScenariosError('');
+      loadScenarios();
+      await load();
+      loadSettings();
+      loadEngineers();
+    } catch (e) {
+      setScenariosError(e instanceof Error ? e.message : 'Не удалось переключить сценарий');
+    }
+  };
+
+  const handleArchiveScenario = async (id: number) => {
+    if (!window.confirm('Архивировать сценарий?')) return;
+    try {
+      await archiveScenario(id);
+      setScenariosError('');
+      loadScenarios();
+    } catch (e) {
+      setScenariosError(e instanceof Error ? e.message : 'Не удалось архивировать сценарий');
+    }
   };
 
   const toggleLootPanel = () => {
@@ -522,6 +611,7 @@ export default function AdminPage() {
     }
     setSettingsOpen(false);
     setMissionOpen(false);
+    setScenariosOpen(false);
     fetchStage2Mission()
       .then((m) => {
         setMission(m);
@@ -541,6 +631,7 @@ export default function AdminPage() {
     }
     setSettingsOpen(false);
     setLootPanelOpen(false);
+    setScenariosOpen(false);
     if (mission.length > 0) {
       setMissionOpen(true);
       return;
@@ -894,6 +985,7 @@ export default function AdminPage() {
         lootPanelOpen={lootPanelOpen}
         chatOpen={chatOpen}
         tracksOpen={tracksOpen}
+        scenariosOpen={scenariosOpen}
         hasFilmLoot={hasFilmLoot}
         onStart={() => void runAdminAction('/game/start')}
         onPause={() => void runAdminAction('/game/pause')}
@@ -928,6 +1020,7 @@ export default function AdminPage() {
         onExportLogs={() => exportLogs()}
         onToggleChat={() => setChatOpen(!chatOpen)}
         onToggleTracks={() => setTracksOpen((v) => !v)}
+        onToggleScenarios={toggleScenarios}
         mapEditMode={mapEditMode}
         gameIdle={data.game_status === 'idle'}
         onToggleMapEdit={() => {
@@ -985,6 +1078,23 @@ export default function AdminPage() {
           />
         )
       )}
+
+      <AdminPanelShell
+        open={scenariosOpen}
+        isNarrow={isNarrow}
+        onClose={toggleScenarios}
+        title="Мероприятия"
+        borderClass="border-sideA/40"
+      >
+        <ScenarioSwitcher
+          scenarios={scenarios}
+          loading={scenariosLoading}
+          error={scenariosError}
+          onCreate={handleCreateScenario}
+          onActivate={handleActivateScenario}
+          onArchive={handleArchiveScenario}
+        />
+      </AdminPanelShell>
 
       <AdminPanelShell
         open={data.current_stage === 1 && missionOpen}

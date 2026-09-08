@@ -11,6 +11,7 @@ from app.models import ChatMessage, User
 from app.routers import ws
 from app.schemas import ChatMessageOut, ChatMessagesResponse, ChatRecipientOut
 from app.services.chat_media import resolve_media_path, save_chat_media
+from app.services.scenario_service import get_active_scenario_id
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -142,7 +143,11 @@ def get_chat_messages(
 ):
   channel = _resolve_side(user, side)
   channel_thread = _resolve_thread(user, thread, for_read=True)
-  q = db.query(ChatMessage).filter(ChatMessage.side == channel, ChatMessage.thread == channel_thread)
+  q = db.query(ChatMessage).filter(
+    ChatMessage.scenario_id == get_active_scenario_id(db),
+    ChatMessage.side == channel,
+    ChatMessage.thread == channel_thread,
+  )
   q = _apply_message_visibility(q, user, channel_thread)
   if after_id > 0:
     q = q.filter(ChatMessage.id > after_id)
@@ -179,6 +184,7 @@ async def post_chat_message(
     media_type, media_path, media_filename = await save_chat_media(file)
 
   msg = ChatMessage(
+    scenario_id=get_active_scenario_id(db),
     side=channel,
     thread=channel_thread,
     sender_role=user.role,

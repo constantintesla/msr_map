@@ -10,7 +10,10 @@ def current_session_tracks(db: Session) -> MovementTracksResponse:
   session_id = game.game_session_id or 1
   rows = (
     db.query(MovementTrackPoint)
-    .filter(MovementTrackPoint.game_session_id == session_id)
+    .filter(
+      MovementTrackPoint.scenario_id == game.id,
+      MovementTrackPoint.game_session_id == session_id,
+    )
     .order_by(MovementTrackPoint.user_id, MovementTrackPoint.recorded_at, MovementTrackPoint.id)
     .all()
   )
@@ -49,7 +52,7 @@ def session_track_rows(db: Session, game: GameState) -> list[MovementTrackPoint]
   session_id = game.game_session_id or 1
   return (
     db.query(MovementTrackPoint)
-    .filter(MovementTrackPoint.game_session_id == session_id)
+    .filter(MovementTrackPoint.scenario_id == game.id, MovementTrackPoint.game_session_id == session_id)
     .order_by(MovementTrackPoint.recorded_at, MovementTrackPoint.id)
     .all()
   )

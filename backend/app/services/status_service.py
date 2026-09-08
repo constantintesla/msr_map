@@ -41,11 +41,21 @@ from app.services.stage1_schedule_service import (
 )
 
 
-def _stage_counts(db: Session) -> list[StageInfo]:
+def _stage_counts(db: Session, scenario_id: int) -> list[StageInfo]:
   stages: list[StageInfo] = []
   for n in (1, 2, 3):
-    pc = db.query(func.count(Point.id)).filter(Point.stage == n).scalar() or 0
-    cc = db.query(func.count(Cache.id)).filter(Cache.stage == n).scalar() or 0
+    pc = (
+      db.query(func.count(Point.id))
+      .filter(Point.scenario_id == scenario_id, Point.stage == n)
+      .scalar()
+      or 0
+    )
+    cc = (
+      db.query(func.count(Cache.id))
+      .filter(Cache.scenario_id == scenario_id, Cache.stage == n)
+      .scalar()
+      or 0
+    )
     stages.append(
       StageInfo(
         stage=n,
@@ -72,6 +82,7 @@ def build_status_response(
   """Статус для карты и командования."""
   del viewer_side
   game = get_or_create_game_state(db)
+  scenario_id = game.id
   if include_scores:
     score_a, score_b = calculate_scores(db, game)
   else:
@@ -93,7 +104,7 @@ def build_status_response(
   map_edit_preview = viewer_role == "admin" and game.status == GameStatus.IDLE.value
 
   points_out: list[PointStatus] = []
-  point_query = db.query(Point).filter(Point.enabled.is_(True))
+  point_query = db.query(Point).filter(Point.scenario_id == scenario_id, Point.enabled.is_(True))
   if not map_edit_preview:
     point_query = point_query.filter(Point.stage == map_point_stage)
   for point in point_query.order_by(Point.id).all():
@@ -130,7 +141,7 @@ def build_status_response(
     )
 
   caches_out: list[CacheStatus] = []
-  cache_query = db.query(Cache)
+  cache_query = db.query(Cache).filter(Cache.scenario_id == scenario_id)
   if map_edit_preview:
     pass
   elif stage == 3:
@@ -186,7 +197,12 @@ def build_status_response(
       team_side=lm.team_side,
       enabled=lm.enabled,
     )
-    for lm in db.query(Landmark).filter(Landmark.enabled.is_(True)).order_by(Landmark.id).all()
+    for lm in (
+      db.query(Landmark)
+      .filter(Landmark.scenario_id == scenario_id, Landmark.enabled.is_(True))
+      .order_by(Landmark.id)
+      .all()
+    )
   ]
 
   hold_dm = settings.hold_deadman_seconds
@@ -198,7 +214,7 @@ def build_status_response(
   return StatusResponse(
     game_status=game.status,
     current_stage=stage,
-    stages=_stage_counts(db),
+    stages=_stage_counts(db, scenario_id),
     score_a=score_a,
     score_b=score_b,
     points=points_out,

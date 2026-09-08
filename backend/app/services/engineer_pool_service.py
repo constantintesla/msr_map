@@ -31,9 +31,12 @@ def engineer_password_hint(user: User) -> str:
 
 
 def _game_state(db: Session) -> GameState:
-  gs = db.query(GameState).filter(GameState.id == 1).first()
+  from app.services.scenario_service import get_active_scenario_id
+
+  scenario_id = get_active_scenario_id(db)
+  gs = db.query(GameState).filter(GameState.id == scenario_id).first()
   if gs is None:
-    gs = GameState(id=1)
+    gs = GameState(id=scenario_id)
     db.add(gs)
     db.flush()
   return gs

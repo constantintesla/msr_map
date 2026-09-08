@@ -3,6 +3,7 @@ import json
 from sqlalchemy.orm import Session
 
 from app.models import Cache, EventLog, Point
+from app.services.scenario_service import get_active_scenario_id
 
 SIDE_LABEL = {"A": "ЛК", "B": "СБГ"}
 
@@ -112,7 +113,14 @@ def _event_visible_for_side(event_type: str, payload: dict, side: str) -> bool:
 
 def build_commander_feed(db: Session, side: str, limit: int = 60) -> list[dict]:
   items: list[dict] = []
-  for entry in db.query(EventLog).order_by(EventLog.id.desc()).limit(200).all():
+  scenario_id = get_active_scenario_id(db)
+  for entry in (
+    db.query(EventLog)
+    .filter(EventLog.scenario_id == scenario_id)
+    .order_by(EventLog.id.desc())
+    .limit(200)
+    .all()
+  ):
     try:
       payload = json.loads(entry.payload or "{}")
     except json.JSONDecodeError:

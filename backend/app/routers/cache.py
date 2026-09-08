@@ -14,6 +14,7 @@ from app.schemas import CacheCodeRequest, DeliverRequest, DetonateRequest
 from app.services.capture_settings import capture_distance_disabled, capture_radius_m, gps_accuracy_bonus_max_m
 from app.services.chat_media import save_chat_media
 from app.services.game_service import assert_game_running, get_or_create_game_state, log_event
+from app.services.scenario_service import get_active_scenario_id
 from app.services.scoring import FILM_BREACH_BONUS, FILM_DELIVER_BONUS
 from app.services.stage2_assignment_service import is_cache_issued, is_stage2_active
 
@@ -310,6 +311,7 @@ async def _publish_deliver_report_chat(
     f"Фото доставки ящика на базу для подтверждения штабом."
   )
   msg = ChatMessage(
+    scenario_id=get_active_scenario_id(db),
     side=side,
     thread="cmd",
     sender_role=user.role,

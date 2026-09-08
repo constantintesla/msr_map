@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Cache, FieldOrder, Point, User
 from app.services.game_service import get_or_create_game_state
+from app.services.scenario_service import get_active_scenario_id
 from app.services.stage2_assignment_service import is_cache_issued, is_stage2_active
 
 
@@ -30,7 +31,11 @@ def dismiss_active_orders(db: Session, engineer_user_id: int) -> None:
   now = datetime.utcnow()
   rows = (
     db.query(FieldOrder)
-    .filter(FieldOrder.engineer_user_id == engineer_user_id, FieldOrder.dismissed_at.is_(None))
+    .filter(
+      FieldOrder.scenario_id == get_active_scenario_id(db),
+      FieldOrder.engineer_user_id == engineer_user_id,
+      FieldOrder.dismissed_at.is_(None),
+    )
     .all()
   )
   for row in rows:
@@ -54,6 +59,7 @@ def create_field_order(
   dismiss_active_orders(db, engineer_user_id)
 
   order = FieldOrder(
+    scenario_id=get_active_scenario_id(db),
     side=commander.side or "A",
     commander_username=commander.username,
     engineer_user_id=eng.id,

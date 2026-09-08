@@ -23,33 +23,51 @@ def apply_game_objects(
   caches: list[ParsedCache],
   landmarks: list[ParsedLandmark] | None = None,
   *,
+  scenario_id: int,
   source: str = "kml",
 ) -> tuple[int, int, int]:
-  """Полная перезапись точек, схронов и ориентиров в БД."""
+  """Полная перезапись точек, схронов и ориентиров данного сценария в БД."""
   landmarks = landmarks or []
 
-  db.query(PointReconPhoto).delete(synchronize_session=False)
-  db.query(HoldSession).delete(synchronize_session=False)
-  db.query(CacheHoldSession).delete(synchronize_session=False)
-  db.query(Stage2Assignment).delete(synchronize_session=False)
-  db.query(FieldOrder).filter(FieldOrder.target_kind.in_(("point", "cache"))).delete(
+  stale_point_ids = [
+    p.id for p in db.query(Point.id).filter(Point.scenario_id == scenario_id).all()
+  ]
+  stale_cache_ids = [
+    c.id for c in db.query(Cache.id).filter(Cache.scenario_id == scenario_id).all()
+  ]
+
+  db.query(PointReconPhoto).filter(PointReconPhoto.scenario_id == scenario_id).delete(
     synchronize_session=False
   )
-  db.query(User).filter(User.point_id.isnot(None)).update(
-    {User.point_id: None}, synchronize_session=False
+  db.query(HoldSession).filter(HoldSession.scenario_id == scenario_id).delete(
+    synchronize_session=False
   )
-  db.query(User).filter(User.cache_id.isnot(None)).update(
-    {User.cache_id: None}, synchronize_session=False
+  db.query(CacheHoldSession).filter(CacheHoldSession.scenario_id == scenario_id).delete(
+    synchronize_session=False
   )
-  db.query(Point).delete(synchronize_session=False)
-  db.query(Cache).delete(synchronize_session=False)
-  db.query(Landmark).delete(synchronize_session=False)
+  db.query(Stage2Assignment).filter(Stage2Assignment.scenario_id == scenario_id).delete(
+    synchronize_session=False
+  )
+  db.query(FieldOrder).filter(
+    FieldOrder.scenario_id == scenario_id, FieldOrder.target_kind.in_(("point", "cache"))
+  ).delete(synchronize_session=False)
+  if stale_point_ids:
+    db.query(User).filter(User.point_id.in_(stale_point_ids)).update(
+      {User.point_id: None}, synchronize_session=False
+    )
+  if stale_cache_ids:
+    db.query(User).filter(User.cache_id.in_(stale_cache_ids)).update(
+      {User.cache_id: None}, synchronize_session=False
+    )
+  db.query(Point).filter(Point.scenario_id == scenario_id).delete(synchronize_session=False)
+  db.query(Cache).filter(Cache.scenario_id == scenario_id).delete(synchronize_session=False)
+  db.query(Landmark).filter(Landmark.scenario_id == scenario_id).delete(synchronize_session=False)
   db.flush()
 
   for i, p in enumerate(points, start=1):
     db.add(
       Point(
-        id=i,
+        scenario_id=scenario_id,
         name=p.name,
         lat=p.lat,
         lon=p.lon,
@@ -64,7 +82,7 @@ def apply_game_objects(
     code = f"{2000 + i:04d}"[-4:] if c.cache_kind == "film_loot" else f"{1000 + i:04d}"[-4:]
     db.add(
       Cache(
-        id=i,
+        scenario_id=scenario_id,
         name=c.name,
         lat=c.lat,
         lon=c.lon,
@@ -77,10 +95,10 @@ def apply_game_objects(
       )
     )
 
-  for i, lm in enumerate(landmarks, start=1):
+  for lm in landmarks:
     db.add(
       Landmark(
-        id=i,
+        scenario_id=scenario_id,
         name=lm.name,
         lat=lm.lat,
         lon=lm.lon,
@@ -104,25 +122,25 @@ def apply_game_objects(
   db.commit()
   from app.qr_tokens import ensure_cache_qr_token, ensure_point_qr_token
 
-  for point in db.query(Point).all():
+  for point in db.query(Point).filter(Point.scenario_id == scenario_id).all():
     if not point.qr_token:
       ensure_point_qr_token(point, db)
-  for cache in db.query(Cache).all():
+  for cache in db.query(Cache).filter(Cache.scenario_id == scenario_id).all():
     if not cache.qr_token:
       ensure_cache_qr_token(cache, db)
   db.commit()
   return len(points), len(caches), len(landmarks)
 
 
-def load_kmz_dir_into_db(db: Session, kmz_dir: Path) -> tuple[int, int, int] | None:
+def load_kmz_dir_into_db(db: Session, kmz_dir: Path, scenario_id: int) -> tuple[int, int, int] | None:
   from app.stage2_loot import ensure_stage2_loot_caches
 
   points, caches, landmarks = load_preset_game_kml(kmz_dir)
   if not points and not caches and not landmarks:
     return None
-  result = apply_game_objects(db, points, caches, landmarks, source=str(kmz_dir))
-  ensure_stage2_loot_caches(db)
-  pts = db.query(Point).count()
-  cchs = db.query(Cache).count()
-  lms = db.query(Landmark).count()
+  apply_game_objects(db, points, caches, landmarks, scenario_id=scenario_id, source=str(kmz_dir))
+  ensure_stage2_loot_caches(db, scenario_id)
+  pts = db.query(Point).filter(Point.scenario_id == scenario_id).count()
+  cchs = db.query(Cache).filter(Cache.scenario_id == scenario_id).count()
+  lms = db.query(Landmark).filter(Landmark.scenario_id == scenario_id).count()
   return pts, cchs, lms
