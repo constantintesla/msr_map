@@ -367,21 +367,24 @@ export default function CommanderPage() {
             onPointClick={(p) => openOrder('point', p.id)}
             onCacheClick={(c) => openOrder('cache', c.id)}
             onAdminPopupClose={() => setMapSelection(null)}
-            renderAdminPopup={({ kind, data: target }) => (
-              <CommanderOrderPopup
-                targetKind={kind}
-                target={{ id: target.id, name: target.name, lat: target.lat, lon: target.lon }}
-                engineers={poolEngineers}
-                pointData={kind === 'point' ? (target as CommanderStatusData['points'][number]) : undefined}
-                stage1Phase={data.stage1_phase}
-                side={mySide}
-                onClose={() => setMapSelection(null)}
-                onSent={() => {
-                  setMapSelection(null);
-                  setOrdersRefresh((n) => n + 1);
-                }}
-              />
-            )}
+            renderAdminPopup={({ kind, data: target }) => {
+              if (kind === 'landmark') return null;
+              return (
+                <CommanderOrderPopup
+                  targetKind={kind}
+                  target={{ id: target.id, name: target.name, lat: target.lat, lon: target.lon }}
+                  engineers={poolEngineers}
+                  pointData={kind === 'point' ? (target as CommanderStatusData['points'][number]) : undefined}
+                  stage1Phase={data.stage1_phase}
+                  side={mySide}
+                  onClose={() => setMapSelection(null)}
+                  onSent={() => {
+                    setMapSelection(null);
+                    setOrdersRefresh((n) => n + 1);
+                  }}
+                />
+              );
+            }}
           />
         </div>
         )}

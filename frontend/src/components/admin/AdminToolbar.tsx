@@ -38,14 +38,15 @@ interface AdminToolbarProps {
 }
 
 function ScoreBreakdownLines({ bd }: { bd: SideScoreBreakdown }) {
-  const rows = [
+  const allRows: [string, number][] = [
     ['Удержание', bd.hold],
     ['Захваты', bd.captures],
     ['Вскрытие', bd.loot_breach],
     ['Доставка', bd.loot_deliver],
     ['Посты', bd.posts],
     ['Схроны', bd.caches],
-  ].filter(([, v]) => v > 0);
+  ];
+  const rows = allRows.filter(([, v]) => v > 0);
   if (rows.length === 0) {
     return <span className="text-zinc-500">нет начислений</span>;
   }

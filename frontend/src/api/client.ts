@@ -1155,10 +1155,6 @@ export async function updateGameSettings(data: {
   stage2_start_at?: string | null;
   stage1_slot_minutes?: number;
   stage1_hold_slots?: number[][];
-  gps_accuracy_bonus_max_m?: number;
-  gps_min_accuracy_for_capture_m?: number;
-  gps_lat_offset?: number;
-  gps_lon_offset?: number;
 }): Promise<GameSettings> {
   const res = await authFetch(`${API_BASE}/api/admin/settings`, {
     method: 'PATCH',

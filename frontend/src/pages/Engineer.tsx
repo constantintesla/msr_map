@@ -195,17 +195,20 @@ export default function EngineerPage() {
                 }
                 adminSelection={mapSelection}
                 onAdminPopupClose={() => setMapSelection(null)}
-                renderAdminPopup={({ kind, data: target }) => (
-                  <EngineerTargetPopup
-                    kind={kind}
-                    data={target}
-                    orderNote={orderMatchesSelection ? latest?.note : null}
-                    stage1Phase={data.stage1_phase}
-                    side={side}
-                    onClose={() => setMapSelection(null)}
-                    onOpenCapture={() => navigate(`/point/${target.id}`)}
-                  />
-                )}
+                renderAdminPopup={({ kind, data: target }) => {
+                  if (kind === 'landmark') return null;
+                  return (
+                    <EngineerTargetPopup
+                      kind={kind}
+                      data={target}
+                      orderNote={orderMatchesSelection ? latest?.note : null}
+                      stage1Phase={data.stage1_phase}
+                      side={side}
+                      onClose={() => setMapSelection(null)}
+                      onOpenCapture={() => navigate(`/point/${target.id}`)}
+                    />
+                  );
+                }}
                 onPointClick={(p) => focusTarget('point', p.id, p.lat, p.lon)}
                 onCacheClick={(c) => focusTarget('cache', c.id, c.lat, c.lon)}
               />

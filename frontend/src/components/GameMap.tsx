@@ -305,13 +305,12 @@ export type MapCreateTarget =
     }
   | { kind: 'landmark'; landmarkKind: 'base' | 'start' | 'base_start'; team_side: 'A' | 'B' };
 
-type AdminPopupRenderer = (target: {
-  kind: 'point' | 'cache' | 'landmark';
-  data:
-    | StatusData['points'][number]
-    | StatusData['caches'][number]
-    | NonNullable<StatusData['landmarks']>[number];
-}) => ReactNode;
+type AdminPopupRenderer = (
+  target:
+    | { kind: 'point'; data: StatusData['points'][number] }
+    | { kind: 'cache'; data: StatusData['caches'][number] }
+    | { kind: 'landmark'; data: NonNullable<StatusData['landmarks']>[number] },
+) => ReactNode;
 
 interface GameMapProps {
   data: StatusData;
@@ -372,14 +371,16 @@ function AdminSelectionPopup({
         ? data.caches.find((c) => c.id === adminSelection.id)
         : (data.landmarks || []).find((lm) => lm.id === adminSelection.id);
 
-  const content = target
-    ? renderAdminPopup({
-        kind: adminSelection.kind,
-        data: target as StatusData['points'][number] &
-          StatusData['caches'][number] &
-          NonNullable<StatusData['landmarks']>[number],
-      })
-    : null;
+  const content = !target
+    ? null
+    : adminSelection.kind === 'point'
+      ? renderAdminPopup({ kind: 'point', data: target as StatusData['points'][number] })
+      : adminSelection.kind === 'cache'
+        ? renderAdminPopup({ kind: 'cache', data: target as StatusData['caches'][number] })
+        : renderAdminPopup({
+            kind: 'landmark',
+            data: target as NonNullable<StatusData['landmarks']>[number],
+          });
 
   useEffect(() => {
     if (!target) return;
