@@ -12,6 +12,8 @@ import {
 } from '../api/client';
 import { logout } from '../utils/auth';
 import TowerScanResultView from '../components/TowerScanResultView';
+import TowerMap from '../components/TowerMap';
+import { TOWER_MAP_BY_FACTION } from '../data/towerMapPoints';
 
 export default function TowerHomePage() {
   const navigate = useNavigate();
@@ -71,6 +73,10 @@ export default function TowerHomePage() {
         <button type="button" className="text-xs text-zinc-500 underline" onClick={() => logout(navigate)}>
           Выйти
         </button>
+      </div>
+
+      <div className="mb-6">
+        <TowerMap points={TOWER_MAP_BY_FACTION[factionCode] || []} />
       </div>
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 mb-6">

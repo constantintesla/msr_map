@@ -13,14 +13,19 @@ import {
   type TowerOrder,
 } from '../api/client';
 import { logout } from '../utils/auth';
+import TowerMap from '../components/TowerMap';
+import { TOWER_MAP_BY_FACTION } from '../data/towerMapPoints';
 
-type Tab = 'chat' | 'orders' | 'roster';
+type Tab = 'map' | 'chat' | 'orders' | 'roster';
+
+const TAB_LABEL: Record<Tab, string> = { map: 'Карта', chat: 'Чат', orders: 'Приказы', roster: 'Ростер' };
 
 export default function TowerCommanderPage() {
   const navigate = useNavigate();
   const factionName = localStorage.getItem('faction_name') || '';
+  const factionCode = localStorage.getItem('faction_code') || '';
   const username = localStorage.getItem('username') || '';
-  const [tab, setTab] = useState<Tab>('chat');
+  const [tab, setTab] = useState<Tab>('map');
 
   return (
     <div className="min-h-dvh flex flex-col max-w-lg mx-auto">
@@ -35,19 +40,20 @@ export default function TowerCommanderPage() {
       </div>
 
       <div className="flex border-b border-zinc-800">
-        {(['chat', 'orders', 'roster'] as Tab[]).map((t) => (
+        {(['map', 'chat', 'orders', 'roster'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
             className={`flex-1 py-2 text-sm ${tab === t ? 'text-sideA border-b-2 border-sideA' : 'text-zinc-500'}`}
             onClick={() => setTab(t)}
           >
-            {t === 'chat' ? 'Чат' : t === 'orders' ? 'Приказы' : 'Ростер'}
+            {TAB_LABEL[t]}
           </button>
         ))}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {tab === 'map' && <TowerMap points={TOWER_MAP_BY_FACTION[factionCode] || []} height="calc(100dvh - 140px)" />}
         {tab === 'chat' && <ChatTab />}
         {tab === 'orders' && <OrdersTab />}
         {tab === 'roster' && <RosterTab />}

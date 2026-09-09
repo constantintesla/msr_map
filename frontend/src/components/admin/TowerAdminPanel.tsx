@@ -7,7 +7,6 @@ import {
   updateTowerRevealSchedule,
   type TowerAdminOverview,
 } from '../../api/client';
-
 function toLocalInputValue(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
