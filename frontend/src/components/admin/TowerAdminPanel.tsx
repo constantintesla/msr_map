@@ -4,9 +4,7 @@ import {
   fetchTowerAdminRoster,
   resetTowerUrZone,
   seedTowerScenario,
-  setTowerCurrentPhase,
   updateTowerFaction,
-  updateTowerPhases,
   updateTowerRevealSchedule,
   uploadTowerElderPhoto,
   type TowerAdminOverview,
@@ -22,13 +20,12 @@ function toLocalInputValue(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-type Tab = 'map' | 'factions' | 'qr' | 'phases' | 'ur' | 'schedule';
+type Tab = 'map' | 'factions' | 'qr' | 'ur' | 'schedule';
 
 const TAB_LABEL: Record<Tab, string> = {
   map: 'Карта',
   factions: 'Стороны',
   qr: 'QR-коды',
-  phases: 'Этапы',
   ur: 'Укрепрайоны',
   schedule: 'Расписание',
 };
@@ -41,7 +38,6 @@ export default function TowerAdminPanel() {
   const [dropCoords, setDropCoords] = useState<Record<number, { lat: string; lon: string }>>({});
   const [scheduleInputs, setScheduleInputs] = useState<string[]>(['']);
   const [copied, setCopied] = useState<string | null>(null);
-  const [phaseInputs, setPhaseInputs] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>('map');
   const [roster, setRoster] = useState<TowerAdminRosterItem[]>([]);
@@ -65,7 +61,6 @@ export default function TowerAdminPanel() {
         setScheduleInputs(
           data.reveal_schedule.length ? data.reveal_schedule.map(toLocalInputValue) : ['']
         );
-        setPhaseInputs(data.phases);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки');
@@ -147,24 +142,6 @@ export default function TowerAdminPanel() {
     }
   };
 
-  const handleSavePhases = async () => {
-    try {
-      await updateTowerPhases(phaseInputs);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить этапы');
-    }
-  };
-
-  const handleSetCurrentPhase = async (index: number) => {
-    try {
-      await setTowerCurrentPhase(index);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось переключить этап');
-    }
-  };
-
   const handleUploadPhoto = async (factionId: number, file: File) => {
     setUploadingPhoto(factionId);
     setError('');
@@ -207,7 +184,7 @@ export default function TowerAdminPanel() {
   return (
     <div className="no-print flex flex-col h-full">
       <div className="flex border-b border-zinc-800 shrink-0">
-        {(['map', 'factions', 'qr', 'phases', 'ur', 'schedule'] as Tab[]).map((t) => (
+        {(['map', 'factions', 'qr', 'ur', 'schedule'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -345,60 +322,6 @@ export default function TowerAdminPanel() {
         )}
 
         {tab === 'qr' && <TowerQrPrint overview={overview} />}
-
-        {tab === 'phases' && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-zinc-200">Этапы игры</h3>
-            <p className="text-xs text-zinc-500">
-              Переключаются вручную мастером — текущий этап виден игрокам и командирам на их страницах.
-            </p>
-            <div className="space-y-1">
-              {phaseInputs.map((val, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span
-                    className={`text-xs w-5 shrink-0 ${i === overview.current_phase ? 'text-sideA font-bold' : 'text-zinc-600'}`}
-                  >
-                    {i === overview.current_phase ? '●' : i + 1}
-                  </span>
-                  <input
-                    className="input flex-1 text-sm py-1"
-                    value={val}
-                    onChange={(e) => setPhaseInputs((arr) => arr.map((v, j) => (j === i ? e.target.value : v)))}
-                  />
-                  <button
-                    type="button"
-                    className={`btn text-xs py-0.5 px-2 min-h-0 border ${
-                      i === overview.current_phase ? 'border-sideA text-sideA' : 'border-zinc-600'
-                    }`}
-                    disabled={i === overview.current_phase}
-                    onClick={() => void handleSetCurrentPhase(i)}
-                  >
-                    {i === overview.current_phase ? 'Текущий' : 'Сделать текущим'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn text-xs py-0.5 px-2 min-h-0 border border-zinc-600"
-                    onClick={() => setPhaseInputs((arr) => arr.filter((_, j) => j !== i))}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn text-xs border border-zinc-600"
-                onClick={() => setPhaseInputs((arr) => [...arr, ''])}
-              >
-                + этап
-              </button>
-              <button type="button" className="btn text-xs bg-sideA text-white" onClick={() => void handleSavePhases()}>
-                Сохранить список этапов
-              </button>
-            </div>
-          </div>
-        )}
 
         {tab === 'ur' && (
           <div className="space-y-2">

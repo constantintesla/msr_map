@@ -11,7 +11,7 @@ from app.database import get_db
 from app.models import Scenario, User
 from app.qr_tokens import qr_entry_url
 from app.tower import commander_service
-from app.tower.config_service import get_phases, get_tower_config, set_phases
+from app.tower.config_service import get_tower_config
 from app.tower.media import elder_photo_url, save_elder_photo
 from app.tower.models import Faction, UrPoint, UrZone
 from app.tower.schemas import (
@@ -20,8 +20,6 @@ from app.tower.schemas import (
   TowerCommanderAdminOut,
   TowerFactionAdminOut,
   TowerFactionAdminUpdate,
-  TowerPhaseSetRequest,
-  TowerPhasesUpdate,
   TowerRevealScheduleUpdate,
   TowerUrPointAdminOut,
   TowerUrZoneAdminOut,
@@ -122,8 +120,6 @@ def _overview(db: Session, scenario_id: int) -> TowerAdminOverviewOut:
     reveal_schedule=[datetime.fromisoformat(t) for t in schedule],
     ur_sync_window_seconds=cfg.ur_sync_window_seconds,
     ur_hold_seconds=cfg.ur_hold_seconds,
-    phases=get_phases(cfg),
-    current_phase=cfg.current_phase,
   )
 
 
@@ -211,35 +207,6 @@ async def upload_elder_photo(
   db.commit()
   overview_out = _overview(db, faction.scenario_id)
   return next(f for f in overview_out.factions if f.id == faction_id)
-
-
-@router.patch("/phases")
-def update_phases(
-  body: TowerPhasesUpdate,
-  db: Annotated[Session, Depends(get_db)],
-  _: Annotated[User, Depends(require_admin)],
-):
-  scenario_id = _tower_scenario_id(db)
-  cfg = get_tower_config(db, scenario_id)
-  set_phases(cfg, body.phases)
-  db.commit()
-  return {"ok": True, "phases": get_phases(cfg)}
-
-
-@router.post("/phases/current")
-def set_current_phase(
-  body: TowerPhaseSetRequest,
-  db: Annotated[Session, Depends(get_db)],
-  _: Annotated[User, Depends(require_admin)],
-):
-  scenario_id = _tower_scenario_id(db)
-  cfg = get_tower_config(db, scenario_id)
-  phases = get_phases(cfg)
-  if body.phase >= len(phases):
-    raise HTTPException(status_code=400, detail="Такого этапа нет в списке")
-  cfg.current_phase = body.phase
-  db.commit()
-  return {"ok": True, "current_phase": cfg.current_phase, "phase_name": phases[body.phase]}
 
 
 @router.get("/roster", response_model=list[TowerAdminRosterItemOut])

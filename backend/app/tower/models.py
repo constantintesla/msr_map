@@ -67,8 +67,6 @@ class TowerConfig(Base):
   reveal_schedule_json: Mapped[str | None] = mapped_column(Text, nullable=True)
   ur_sync_window_seconds: Mapped[int] = mapped_column(Integer, default=180)
   ur_hold_seconds: Mapped[int] = mapped_column(Integer, default=1200)
-  phases_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-  current_phase: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class UrZone(Base):

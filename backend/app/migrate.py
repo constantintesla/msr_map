@@ -141,10 +141,6 @@ def run_migrations() -> None:
   _add_column_if_missing(
     "engineer_locations", "faction_id", "ALTER TABLE engineer_locations ADD COLUMN faction_id INTEGER"
   )
-  _add_column_if_missing("tower_config", "phases_json", "ALTER TABLE tower_config ADD COLUMN phases_json TEXT")
-  _add_column_if_missing(
-    "tower_config", "current_phase", "ALTER TABLE tower_config ADD COLUMN current_phase INTEGER DEFAULT 0"
-  )
   for table in (
     "points",
     "caches",

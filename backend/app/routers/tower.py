@@ -49,15 +49,12 @@ def status(
   db: Annotated[Session, Depends(get_db)],
   user: Annotated[User, Depends(require_tower_user)],
 ):
-  from app.tower.config_service import current_phase_name, get_tower_config
   from app.tower.scan_service import zone_to_dict
 
   scenario_id = _user_scenario_id(db, user)
   zones = refresh_all_zones(db, scenario_id)
-  cfg = get_tower_config(db, scenario_id)
   return {
     "ur_zones": [zone_to_dict(db, z) for z in zones],
-    "current_phase": current_phase_name(cfg),
   }
 
 

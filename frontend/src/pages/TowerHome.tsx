@@ -5,7 +5,6 @@ import {
   fetchActiveTowerOrders,
   fetchTowerChatMessages,
   fetchTowerScannable,
-  fetchTowerStatus,
   scanTowerToken,
   sendTowerChatMessage,
   type TowerChatMessage,
@@ -31,14 +30,12 @@ export default function TowerHomePage() {
   const [orders, setOrders] = useState<TowerOrder[]>([]);
   const [chat, setChat] = useState<TowerChatMessage[]>([]);
   const [chatText, setChatText] = useState('');
-  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
   const [scannable, setScannable] = useState<TowerScannableItem[]>([]);
 
   useEffect(() => {
     const load = () => {
       fetchActiveTowerOrders().then(setOrders);
       fetchTowerChatMessages('eng').then((r) => setChat(r.items));
-      fetchTowerStatus().then((r) => setCurrentPhase(r.current_phase));
     };
     load();
     fetchTowerScannable().then(setScannable);
@@ -96,12 +93,6 @@ export default function TowerHomePage() {
           Выйти
         </button>
       </div>
-
-      {currentPhase && (
-        <div className="mb-4 rounded-lg border border-sideA/40 bg-sideA/10 px-3 py-2 text-sm text-sideA">
-          {currentPhase}
-        </div>
-      )}
 
       <div className="mb-6">
         <TowerMap

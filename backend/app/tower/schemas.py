@@ -81,14 +81,6 @@ class TowerRevealScheduleUpdate(BaseModel):
   thresholds: list[datetime] = Field(default_factory=list)
 
 
-class TowerPhasesUpdate(BaseModel):
-  phases: list[str] = Field(default_factory=list)
-
-
-class TowerPhaseSetRequest(BaseModel):
-  phase: int = Field(ge=0)
-
-
 class TowerAdminOverviewOut(BaseModel):
   scenario_id: int
   factions: list[TowerFactionAdminOut]
@@ -97,8 +89,6 @@ class TowerAdminOverviewOut(BaseModel):
   reveal_schedule: list[datetime] = []
   ur_sync_window_seconds: int
   ur_hold_seconds: int
-  phases: list[str] = []
-  current_phase: int = 0
 
 
 # --- чат / приказы / геолокация (faction-scoped аналог side-based) ---
