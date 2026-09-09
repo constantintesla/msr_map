@@ -1701,3 +1701,14 @@ export async function fetchTowerRoster(): Promise<TowerLocation[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+export interface TowerAdminRosterItem extends TowerLocation {
+  faction_code: string;
+  faction_name: string;
+}
+
+export async function fetchTowerAdminRoster(): Promise<TowerAdminRosterItem[]> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/roster`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  return res.json();
+}

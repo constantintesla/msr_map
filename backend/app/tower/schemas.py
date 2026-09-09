@@ -166,3 +166,8 @@ class TowerLocationOut(BaseModel):
   lon: float
   accuracy: float
   updated_at: datetime
+
+
+class TowerAdminRosterItemOut(TowerLocationOut):
+  faction_code: str
+  faction_name: str

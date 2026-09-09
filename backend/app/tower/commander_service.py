@@ -293,6 +293,20 @@ def ping_location(db: Session, user: User, lat: float, lon: float, accuracy: flo
 STALE_SECONDS = 300
 
 
+def list_roster_for_scenario(db: Session, scenario_id: int) -> list[EngineerLocation]:
+  """Все стороны сразу — для админа (в отличие от list_roster, которая
+  всегда одна конкретная сторона командира)."""
+  from datetime import timedelta
+
+  cutoff = datetime.utcnow() - timedelta(seconds=STALE_SECONDS)
+  return (
+    db.query(EngineerLocation)
+    .filter(EngineerLocation.scenario_id == scenario_id, EngineerLocation.updated_at >= cutoff)
+    .order_by(EngineerLocation.username)
+    .all()
+  )
+
+
 def list_roster(db: Session, faction_id: int) -> list[EngineerLocation]:
   from datetime import timedelta
 

@@ -10,11 +10,13 @@ from app.config import settings
 from app.database import get_db
 from app.models import Scenario, User
 from app.qr_tokens import qr_entry_url
+from app.tower import commander_service
 from app.tower.config_service import get_phases, get_tower_config, set_phases
 from app.tower.media import elder_photo_url, save_elder_photo
 from app.tower.models import Faction, UrPoint, UrZone
 from app.tower.schemas import (
   TowerAdminOverviewOut,
+  TowerAdminRosterItemOut,
   TowerCommanderAdminOut,
   TowerFactionAdminOut,
   TowerFactionAdminUpdate,
@@ -236,3 +238,31 @@ def set_current_phase(
   cfg.current_phase = body.phase
   db.commit()
   return {"ok": True, "current_phase": cfg.current_phase, "phase_name": phases[body.phase]}
+
+
+@router.get("/roster", response_model=list[TowerAdminRosterItemOut])
+def roster(
+  db: Annotated[Session, Depends(get_db)],
+  _: Annotated[User, Depends(require_admin)],
+):
+  """Живые позиции всех сторон разом — для карты в админке."""
+  scenario_id = _tower_scenario_id(db)
+  rows = commander_service.list_roster_for_scenario(db, scenario_id)
+  factions = {f.id: f for f in db.query(Faction).filter(Faction.scenario_id == scenario_id).all()}
+  out = []
+  for r in rows:
+    faction = factions.get(r.faction_id)
+    out.append(
+      TowerAdminRosterItemOut(
+        user_id=r.user_id,
+        username=r.username,
+        faction_id=r.faction_id,
+        lat=r.lat,
+        lon=r.lon,
+        accuracy=r.accuracy,
+        updated_at=r.updated_at,
+        faction_code=faction.code if faction else "?",
+        faction_name=faction.name if faction else "?",
+      )
+    )
+  return out

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   fetchTowerAdminOverview,
+  fetchTowerAdminRoster,
   resetTowerUrZone,
   seedTowerScenario,
   setTowerCurrentPhase,
@@ -9,12 +10,26 @@ import {
   updateTowerRevealSchedule,
   uploadTowerElderPhoto,
   type TowerAdminOverview,
+  type TowerAdminRosterItem,
 } from '../../api/client';
+import TowerMap from '../TowerMap';
+import { TOWER_MAP_ADMIN } from '../../data/towerMapPoints';
+
 function toLocalInputValue(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+type Tab = 'map' | 'factions' | 'phases' | 'ur' | 'schedule';
+
+const TAB_LABEL: Record<Tab, string> = {
+  map: 'Карта',
+  factions: 'Стороны',
+  phases: 'Этапы',
+  ur: 'Укрепрайоны',
+  schedule: 'Расписание',
+};
 
 export default function TowerAdminPanel() {
   const [overview, setOverview] = useState<TowerAdminOverview | null>(null);
@@ -25,6 +40,8 @@ export default function TowerAdminPanel() {
   const [copied, setCopied] = useState<string | null>(null);
   const [phaseInputs, setPhaseInputs] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState<number | null>(null);
+  const [tab, setTab] = useState<Tab>('map');
+  const [roster, setRoster] = useState<TowerAdminRosterItem[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -49,6 +66,14 @@ export default function TowerAdminPanel() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    if (!overview) return;
+    const loadRoster = () => fetchTowerAdminRoster().then(setRoster);
+    loadRoster();
+    const t = setInterval(loadRoster, 10000);
+    return () => clearInterval(t);
+  }, [overview]);
 
   const handleSeed = async () => {
     setLoading(true);
@@ -136,80 +161,50 @@ export default function TowerAdminPanel() {
     }
   };
 
-  return (
-    <div className="no-print p-4 space-y-5 border-t border-zinc-800 mt-2 pt-4">
-      <div>
-        <h2 className="text-base font-bold text-sideA">Башня — стороны, QR, укрепрайоны</h2>
-        <p className="text-sm text-zinc-400 mt-0.5">
-          Отдельный сценарий с 4 сторонами (СБГ / ДРГ / Првонек / Корбул). Активируйте его выше в
-          «Мероприятия», когда он готов к игре.
-        </p>
-      </div>
-
-      {error && <p className="text-sm text-sideB">{error}</p>}
-
-      {!overview && !loading && (
+  if (!overview && !loading) {
+    return (
+      <div className="no-print p-4 space-y-3">
+        <p className="text-sm text-zinc-400">Сценарий «Башня» ещё не создан.</p>
+        {error && <p className="text-sm text-sideB">{error}</p>}
         <button type="button" className="btn bg-sideA text-white text-sm" onClick={() => void handleSeed()}>
           Создать сценарий «Башня»
         </button>
-      )}
+      </div>
+    );
+  }
 
-      {loading && !overview && <p className="text-sm text-zinc-500">Загрузка…</p>}
+  if (!overview) {
+    return <p className="p-4 text-sm text-zinc-500">Загрузка…</p>;
+  }
 
-      {overview && (
-        <>
+  return (
+    <div className="no-print flex flex-col h-full">
+      <div className="flex border-b border-zinc-800 shrink-0">
+        {(['map', 'factions', 'phases', 'ur', 'schedule'] as Tab[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            className={`flex-1 py-2 text-sm ${tab === t ? 'text-sideA border-b-2 border-sideA' : 'text-zinc-500'}`}
+            onClick={() => setTab(t)}
+          >
+            {TAB_LABEL[t]}
+          </button>
+        ))}
+      </div>
+
+      {error && <p className="text-sm text-sideB p-4 pb-0">{error}</p>}
+
+      <div className="p-4 space-y-5">
+        {tab === 'map' && (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-zinc-200">Этапы игры</h3>
             <p className="text-xs text-zinc-500">
-              Переключаются вручную мастером — текущий этап виден игрокам и командирам на их страницах.
+              Все точки из Башня.kml + живые позиции всех сторон (обновляется раз в 10 сек).
             </p>
-            <div className="space-y-1">
-              {phaseInputs.map((val, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span
-                    className={`text-xs w-5 shrink-0 ${i === overview.current_phase ? 'text-sideA font-bold' : 'text-zinc-600'}`}
-                  >
-                    {i === overview.current_phase ? '●' : i + 1}
-                  </span>
-                  <input
-                    className="input flex-1 text-sm py-1"
-                    value={val}
-                    onChange={(e) => setPhaseInputs((arr) => arr.map((v, j) => (j === i ? e.target.value : v)))}
-                  />
-                  <button
-                    type="button"
-                    className={`btn text-xs py-0.5 px-2 min-h-0 border ${
-                      i === overview.current_phase ? 'border-sideA text-sideA' : 'border-zinc-600'
-                    }`}
-                    disabled={i === overview.current_phase}
-                    onClick={() => void handleSetCurrentPhase(i)}
-                  >
-                    {i === overview.current_phase ? 'Текущий' : 'Сделать текущим'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn text-xs py-0.5 px-2 min-h-0 border border-zinc-600"
-                    onClick={() => setPhaseInputs((arr) => arr.filter((_, j) => j !== i))}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn text-xs border border-zinc-600"
-                onClick={() => setPhaseInputs((arr) => [...arr, ''])}
-              >
-                + этап
-              </button>
-              <button type="button" className="btn text-xs bg-sideA text-white" onClick={() => void handleSavePhases()}>
-                Сохранить список этапов
-              </button>
-            </div>
+            <TowerMap points={TOWER_MAP_ADMIN} height="calc(100dvh - 210px)" roster={roster} />
           </div>
+        )}
 
+        {tab === 'factions' && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-zinc-200">Ссылки регистрации и командиры</h3>
             {overview.factions.map((f) => {
@@ -290,7 +285,99 @@ export default function TowerAdminPanel() {
               );
             })}
           </div>
+        )}
 
+        {tab === 'phases' && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-zinc-200">Этапы игры</h3>
+            <p className="text-xs text-zinc-500">
+              Переключаются вручную мастером — текущий этап виден игрокам и командирам на их страницах.
+            </p>
+            <div className="space-y-1">
+              {phaseInputs.map((val, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span
+                    className={`text-xs w-5 shrink-0 ${i === overview.current_phase ? 'text-sideA font-bold' : 'text-zinc-600'}`}
+                  >
+                    {i === overview.current_phase ? '●' : i + 1}
+                  </span>
+                  <input
+                    className="input flex-1 text-sm py-1"
+                    value={val}
+                    onChange={(e) => setPhaseInputs((arr) => arr.map((v, j) => (j === i ? e.target.value : v)))}
+                  />
+                  <button
+                    type="button"
+                    className={`btn text-xs py-0.5 px-2 min-h-0 border ${
+                      i === overview.current_phase ? 'border-sideA text-sideA' : 'border-zinc-600'
+                    }`}
+                    disabled={i === overview.current_phase}
+                    onClick={() => void handleSetCurrentPhase(i)}
+                  >
+                    {i === overview.current_phase ? 'Текущий' : 'Сделать текущим'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn text-xs py-0.5 px-2 min-h-0 border border-zinc-600"
+                    onClick={() => setPhaseInputs((arr) => arr.filter((_, j) => j !== i))}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn text-xs border border-zinc-600"
+                onClick={() => setPhaseInputs((arr) => [...arr, ''])}
+              >
+                + этап
+              </button>
+              <button type="button" className="btn text-xs bg-sideA text-white" onClick={() => void handleSavePhases()}>
+                Сохранить список этапов
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'ur' && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-zinc-200">Укрепрайоны (СБГ синхро-захват / ДРГ сброс)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {overview.ur_zones.map((z) => (
+                <div key={z.id} className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-zinc-100">{z.name}</span>
+                    <span
+                      className={`text-xs uppercase tracking-wide ${
+                        z.status === 'captured'
+                          ? 'text-sideA'
+                          : z.status === 'holding'
+                            ? 'text-warning'
+                            : 'text-zinc-500'
+                      }`}
+                    >
+                      {z.status}
+                    </span>
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    {z.points.map((p) => `${p.name}${p.scanned ? '✓' : ''}`).join(' · ')}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn text-xs mt-1 border border-sideB text-sideB"
+                    onClick={() => void handleResetZone(z.id)}
+                  >
+                    Сбросить вручную
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === 'schedule' && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-zinc-200">
               Расписание раскрытия координат схронов (реальное время)
@@ -331,42 +418,8 @@ export default function TowerAdminPanel() {
               </button>
             </div>
           </div>
-
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-zinc-200">Укрепрайоны (СБГ синхро-захват / ДРГ сброс)</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {overview.ur_zones.map((z) => (
-                <div key={z.id} className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-zinc-100">{z.name}</span>
-                    <span
-                      className={`text-xs uppercase tracking-wide ${
-                        z.status === 'captured'
-                          ? 'text-sideA'
-                          : z.status === 'holding'
-                            ? 'text-warning'
-                            : 'text-zinc-500'
-                      }`}
-                    >
-                      {z.status}
-                    </span>
-                  </div>
-                  <div className="text-xs text-zinc-500">
-                    {z.points.map((p) => `${p.name}${p.scanned ? '✓' : ''}`).join(' · ')}
-                  </div>
-                  <button
-                    type="button"
-                    className="btn text-xs mt-1 border border-sideB text-sideB"
-                    onClick={() => void handleResetZone(z.id)}
-                  >
-                    Сбросить вручную
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
