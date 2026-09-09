@@ -131,3 +131,36 @@ def test_ops_factions_get_elder_dossier(db: Session):
   assert drg_result["elder_note"] == "Старейшина: Иван"
   assert drg_result["drop_lat"] == 44.5
   assert drg_result["drop_lon"] == 131.5
+
+
+def test_drg_also_gets_cache_targets_cumulatively(db: Session):
+  """ДРГ должна получать те же координаты схронов, что и вражеская деревня — по тому же расписанию."""
+  scenario_id = _make_scenario(db)
+  target = _make_faction(db, scenario_id, code="prvonek", kind="village", elder_note="Старейшина: Иван")
+  drg = _make_faction(db, scenario_id, code="drg", kind="ops")
+  for i, (name, order) in enumerate([("Д1-1", 1), ("Д1-2", 2), ("Д1-3", 3)]):
+    db.add(
+      VillageCacheTarget(
+        scenario_id=scenario_id, faction_id=target.id, name=name, lat=44.0 + i, lon=131.0 + i, reveal_order=order
+      )
+    )
+  db.commit()
+
+  now = datetime.utcnow()
+  _set_schedule(db, scenario_id, [now + timedelta(minutes=30), now + timedelta(minutes=90)])
+
+  result = scan_village_board(db, scenario_id=scenario_id, viewer=drg, target=target, now=now)
+  assert result["cache_targets"] == []
+  assert result["elder_note"] == "Старейшина: Иван"
+
+  result = scan_village_board(
+    db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=31)
+  )
+  assert [t["name"] for t in result["cache_targets"]] == ["Д1-1"]
+
+  # раскрытие ДРГ отслеживается отдельно от раскрытия вражеской деревне (свой VillageRevealState)
+  other_village = _make_faction(db, scenario_id, code="korbul", kind="village")
+  village_view = scan_village_board(
+    db, scenario_id=scenario_id, viewer=other_village, target=target, now=now + timedelta(minutes=31)
+  )
+  assert [t["name"] for t in village_view["cache_targets"]] == ["Д1-1"]

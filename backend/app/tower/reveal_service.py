@@ -50,59 +50,65 @@ def scan_village_board(
     "target_faction_name": target.name,
   }
 
-  if viewer.kind == "village":
-    allowed = allowed_reveal_count(db, scenario_id, now)
-    state = (
-      db.query(VillageRevealState)
-      .filter(
-        VillageRevealState.scenario_id == scenario_id,
-        VillageRevealState.target_faction_id == target.id,
-        VillageRevealState.viewer_faction_id == viewer.id,
-      )
-      .first()
-    )
-    if state is None:
-      state = VillageRevealState(
-        scenario_id=scenario_id,
-        target_faction_id=target.id,
-        viewer_faction_id=viewer.id,
-        revealed_count=0,
-      )
-      db.add(state)
-      db.flush()
+  # Деревни раскрывают схроны друг другу; ДРГ получает то же самое —
+  # плюс досье старейшины и координату собственной закладки (см. ниже).
+  if viewer.kind == "village" or viewer.code == "drg":
+    result.update(_reveal_cache_targets(db, scenario_id=scenario_id, viewer=viewer, target=target, now=now))
 
-    if state.revealed_count < allowed:
-      state.revealed_count = allowed
-      state.last_revealed_at = now
-      tower_log_event(
-        db,
-        scenario_id,
-        "tower_village_revealed",
-        {"target": target.code, "viewer": viewer.code, "count": state.revealed_count},
-      )
+  if viewer.kind == "ops":
+    from app.tower.media import elder_photo_url
 
-    targets = (
-      db.query(VillageCacheTarget)
-      .filter(VillageCacheTarget.faction_id == target.id)
-      .order_by(VillageCacheTarget.reveal_order)
-      .all()
-    )
-    revealed = targets[: state.revealed_count]
-    result["cache_targets"] = [{"name": t.name, "lat": t.lat, "lon": t.lon} for t in revealed]
-    result["revealed_count"] = state.revealed_count
-    result["total_targets"] = len(targets)
-    db.commit()
-    return result
+    result["elder_photo_url"] = elder_photo_url(target.elder_photo_path)
+    result["elder_note"] = target.elder_note
+    if viewer.code == "drg":
+      result["drop_lat"] = target.drop_lat
+      result["drop_lon"] = target.drop_lon
+    tower_log_event(db, scenario_id, "tower_elder_dossier_viewed", {"target": target.code, "viewer": viewer.code})
 
-  # СБГ / ДРГ — досье старейшины; ДРГ дополнительно получает координату закладки
-  from app.tower.media import elder_photo_url
-
-  result["elder_photo_url"] = elder_photo_url(target.elder_photo_path)
-  result["elder_note"] = target.elder_note
-  if viewer.code == "drg":
-    result["drop_lat"] = target.drop_lat
-    result["drop_lon"] = target.drop_lon
-
-  tower_log_event(db, scenario_id, "tower_elder_dossier_viewed", {"target": target.code, "viewer": viewer.code})
   db.commit()
   return result
+
+
+def _reveal_cache_targets(db: Session, *, scenario_id: int, viewer: Faction, target: Faction, now: datetime) -> dict:
+  allowed = allowed_reveal_count(db, scenario_id, now)
+  state = (
+    db.query(VillageRevealState)
+    .filter(
+      VillageRevealState.scenario_id == scenario_id,
+      VillageRevealState.target_faction_id == target.id,
+      VillageRevealState.viewer_faction_id == viewer.id,
+    )
+    .first()
+  )
+  if state is None:
+    state = VillageRevealState(
+      scenario_id=scenario_id,
+      target_faction_id=target.id,
+      viewer_faction_id=viewer.id,
+      revealed_count=0,
+    )
+    db.add(state)
+    db.flush()
+
+  if state.revealed_count < allowed:
+    state.revealed_count = allowed
+    state.last_revealed_at = now
+    tower_log_event(
+      db,
+      scenario_id,
+      "tower_village_revealed",
+      {"target": target.code, "viewer": viewer.code, "count": state.revealed_count},
+    )
+
+  targets = (
+    db.query(VillageCacheTarget)
+    .filter(VillageCacheTarget.faction_id == target.id)
+    .order_by(VillageCacheTarget.reveal_order)
+    .all()
+  )
+  revealed = targets[: state.revealed_count]
+  return {
+    "cache_targets": [{"name": t.name, "lat": t.lat, "lon": t.lon} for t in revealed],
+    "revealed_count": state.revealed_count,
+    "total_targets": len(targets),
+  }
