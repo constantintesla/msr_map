@@ -243,12 +243,13 @@ export default function AdminPage() {
     load();
     loadEngineers();
     loadSettings();
+    loadScenarios();
     const id = setInterval(() => {
       load();
       loadEngineers();
     }, 5000);
     return () => clearInterval(id);
-  }, [load, loadEngineers, loadSettings]);
+  }, [load, loadEngineers, loadSettings, loadScenarios]);
 
   useEffect(() => {
     if (data?.current_stage !== 1 && data?.current_stage !== 2 && data?.current_stage !== 3) {
@@ -946,6 +947,48 @@ export default function AdminPage() {
     return <div className="min-h-dvh flex items-center justify-center">Загрузка админки...</div>;
   }
 
+  const activeScenario = scenarios.find((s) => s.is_active);
+  const isTowerScenario = activeScenario?.name === 'Башня';
+
+  if (isTowerScenario) {
+    return (
+      <div className="h-dvh flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-3 border-b border-zinc-800 bg-zinc-950 shrink-0">
+          <h1 className="text-base font-bold text-sideA">Башня — админка</h1>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn text-xs border border-zinc-600 min-h-0 py-1.5"
+              onClick={toggleScenarios}
+            >
+              Сменить сценарий
+            </button>
+            <LogoutButton />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <TowerAdminPanel />
+        </div>
+        <AdminPanelShell
+          open={scenariosOpen}
+          isNarrow={isNarrow}
+          onClose={toggleScenarios}
+          title="Мероприятия"
+          borderClass="border-sideA/40"
+        >
+          <ScenarioSwitcher
+            scenarios={scenarios}
+            loading={scenariosLoading}
+            error={scenariosError}
+            onCreate={handleCreateScenario}
+            onActivate={handleActivateScenario}
+            onArchive={handleArchiveScenario}
+          />
+        </AdminPanelShell>
+      </div>
+    );
+  }
+
   return (
     <div className="h-dvh flex flex-col overflow-hidden">
       {/* Переключатель этапов */}
@@ -1095,7 +1138,6 @@ export default function AdminPage() {
           onActivate={handleActivateScenario}
           onArchive={handleArchiveScenario}
         />
-        <TowerAdminPanel />
       </AdminPanelShell>
 
       <AdminPanelShell
