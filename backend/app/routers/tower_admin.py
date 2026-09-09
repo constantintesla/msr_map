@@ -13,7 +13,7 @@ from app.qr_tokens import qr_entry_url
 from app.tower import commander_service
 from app.tower.config_service import get_tower_config
 from app.tower.media import elder_photo_url, save_elder_photo
-from app.tower.models import Faction, UrPoint, UrZone
+from app.tower.models import Faction, UrPoint, UrZone, VillageCacheTarget
 from app.tower.schemas import (
   TowerAdminOverviewOut,
   TowerAdminRosterItemOut,
@@ -50,6 +50,7 @@ def _overview(db: Session, scenario_id: int) -> TowerAdminOverviewOut:
   commanders_out = []
   for f in factions:
     registered = db.query(User).filter(User.faction_id == f.id, User.role == "faction").count()
+    cache_total = db.query(VillageCacheTarget).filter(VillageCacheTarget.faction_id == f.id).count()
     faction_out.append(
       TowerFactionAdminOut(
         id=f.id,
@@ -58,12 +59,12 @@ def _overview(db: Session, scenario_id: int) -> TowerAdminOverviewOut:
         kind=f.kind,
         elder_note=f.elder_note,
         elder_photo_url=elder_photo_url(f.elder_photo_path),
-        drop_lat=f.drop_lat,
-        drop_lon=f.drop_lon,
         join_url=_join_url(f.join_token) if f.join_token else None,
         qr_url=qr_entry_url(f.qr_token) if f.qr_token else None,
         manual_code=f.manual_code,
         registered_count=registered,
+        cache_unlocked_count=f.cache_unlocked_count,
+        cache_total=cache_total,
       )
     )
     cmd = (
@@ -150,10 +151,6 @@ def update_faction(
     raise HTTPException(status_code=404, detail="Сторона не найдена")
   if body.elder_note is not None:
     faction.elder_note = body.elder_note
-  if body.drop_lat is not None:
-    faction.drop_lat = body.drop_lat
-  if body.drop_lon is not None:
-    faction.drop_lon = body.drop_lon
   db.commit()
   overview_out = _overview(db, faction.scenario_id)
   match = next(f for f in overview_out.factions if f.id == faction_id)

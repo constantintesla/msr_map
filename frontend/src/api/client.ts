@@ -1356,12 +1356,12 @@ export interface TowerFactionAdmin {
   kind: string;
   elder_note: string | null;
   elder_photo_url: string | null;
-  drop_lat: number | null;
-  drop_lon: number | null;
   join_url: string | null;
   qr_url: string | null;
   manual_code: string | null;
   registered_count: number;
+  cache_unlocked_count: number;
+  cache_total: number;
 }
 
 export interface TowerCommanderAdmin {
@@ -1417,7 +1417,7 @@ export async function fetchTowerAdminOverview(): Promise<TowerAdminOverview | nu
 
 export async function updateTowerFaction(
   factionId: number,
-  patch: { elder_note?: string; drop_lat?: number; drop_lon?: number }
+  patch: { elder_note?: string }
 ): Promise<TowerFactionAdmin> {
   const res = await authFetch(`${API_BASE}/api/admin/tower/factions/${factionId}`, {
     method: 'PATCH',
@@ -1492,8 +1492,6 @@ export type TowerScanResult =
         target_faction_name: string;
         elder_photo_url?: string | null;
         elder_note?: string | null;
-        drop_lat?: number | null;
-        drop_lon?: number | null;
         cache_targets?: Array<{ name: string; lat: number; lon: number }>;
         revealed_count?: number;
         total_targets?: number;

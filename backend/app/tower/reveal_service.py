@@ -1,10 +1,11 @@
-"""Раскрытие координат схронов деревни по расписанию реального времени.
+"""Раскрытие координат схронов деревни.
 
-Универсальный алгоритм: TowerConfig.reveal_schedule_json — отсортированный
-список ISO-datetime порогов. Сколько порогов уже наступило — столько целей
-по порядку reveal_order раскрыто конкретной наблюдающей стороне. Расписание
-можно сделать сколь угодно длинным (например каждые 15 минут) — логика та
-же, не завязана на конкретное число схронов или порогов.
+ДРГ, сканируя табличку деревни, «ставит» её схроны по расписанию реального
+времени — TowerConfig.reveal_schedule_json, отсортированный список
+ISO-datetime порогов. Сколько порогов уже наступило — столько схронов (по
+порядку reveal_order) ДРГ успел поставить. Враждебная деревня, сканируя ту же
+табличку, видит ровно то, что ДРГ уже поставил — не больше и не меньше,
+независимо от того, когда сама деревня зашла сканировать.
 """
 
 import json
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.tower.config_service import get_tower_config
 from app.tower.events import tower_log_event
-from app.tower.models import Faction, VillageCacheTarget, VillageRevealState
+from app.tower.models import Faction, VillageCacheTarget
 
 
 def _reveal_schedule(schedule_json: str | None) -> list[datetime]:
@@ -50,65 +51,35 @@ def scan_village_board(
     "target_faction_name": target.name,
   }
 
-  # Деревни раскрывают схроны друг другу; ДРГ получает то же самое —
-  # плюс досье старейшины и координату собственной закладки (см. ниже).
+  if viewer.code == "drg":
+    allowed = allowed_reveal_count(db, scenario_id, now)
+    if target.cache_unlocked_count < allowed:
+      target.cache_unlocked_count = allowed
+      tower_log_event(
+        db,
+        scenario_id,
+        "tower_cache_unlocked_by_drg",
+        {"target": target.code, "count": target.cache_unlocked_count},
+      )
+
   if viewer.kind == "village" or viewer.code == "drg":
-    result.update(_reveal_cache_targets(db, scenario_id=scenario_id, viewer=viewer, target=target, now=now))
+    targets = (
+      db.query(VillageCacheTarget)
+      .filter(VillageCacheTarget.faction_id == target.id)
+      .order_by(VillageCacheTarget.reveal_order)
+      .all()
+    )
+    revealed = targets[: target.cache_unlocked_count]
+    result["cache_targets"] = [{"name": t.name, "lat": t.lat, "lon": t.lon} for t in revealed]
+    result["revealed_count"] = target.cache_unlocked_count
+    result["total_targets"] = len(targets)
 
   if viewer.kind == "ops":
     from app.tower.media import elder_photo_url
 
     result["elder_photo_url"] = elder_photo_url(target.elder_photo_path)
     result["elder_note"] = target.elder_note
-    if viewer.code == "drg":
-      result["drop_lat"] = target.drop_lat
-      result["drop_lon"] = target.drop_lon
     tower_log_event(db, scenario_id, "tower_elder_dossier_viewed", {"target": target.code, "viewer": viewer.code})
 
   db.commit()
   return result
-
-
-def _reveal_cache_targets(db: Session, *, scenario_id: int, viewer: Faction, target: Faction, now: datetime) -> dict:
-  allowed = allowed_reveal_count(db, scenario_id, now)
-  state = (
-    db.query(VillageRevealState)
-    .filter(
-      VillageRevealState.scenario_id == scenario_id,
-      VillageRevealState.target_faction_id == target.id,
-      VillageRevealState.viewer_faction_id == viewer.id,
-    )
-    .first()
-  )
-  if state is None:
-    state = VillageRevealState(
-      scenario_id=scenario_id,
-      target_faction_id=target.id,
-      viewer_faction_id=viewer.id,
-      revealed_count=0,
-    )
-    db.add(state)
-    db.flush()
-
-  if state.revealed_count < allowed:
-    state.revealed_count = allowed
-    state.last_revealed_at = now
-    tower_log_event(
-      db,
-      scenario_id,
-      "tower_village_revealed",
-      {"target": target.code, "viewer": viewer.code, "count": state.revealed_count},
-    )
-
-  targets = (
-    db.query(VillageCacheTarget)
-    .filter(VillageCacheTarget.faction_id == target.id)
-    .order_by(VillageCacheTarget.reveal_order)
-    .all()
-  )
-  revealed = targets[: state.revealed_count]
-  return {
-    "cache_targets": [{"name": t.name, "lat": t.lat, "lon": t.lon} for t in revealed],
-    "revealed_count": state.revealed_count,
-    "total_targets": len(targets),
-  }

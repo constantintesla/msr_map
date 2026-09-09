@@ -30,8 +30,9 @@ class Faction(Base):
   manual_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
   elder_photo_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
   elder_note: Mapped[str | None] = mapped_column(Text, nullable=True)
-  drop_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
-  drop_lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+  # ДРГ «ставит» схроны деревни по расписанию (см reveal_service) — сколько уже
+  # поставлено; вражеская деревня видит ровно столько же, сколько уже поставил ДРГ.
+  cache_unlocked_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class VillageCacheTarget(Base):
@@ -45,18 +46,6 @@ class VillageCacheTarget(Base):
   lat: Mapped[float] = mapped_column(Float)
   lon: Mapped[float] = mapped_column(Float)
   reveal_order: Mapped[int] = mapped_column(Integer)
-
-
-class VillageRevealState(Base):
-  """Сколько схронов target_faction уже раскрыто viewer_faction, и когда в последний раз."""
-  __tablename__ = "tower_village_reveal_state"
-
-  id: Mapped[int] = mapped_column(Integer, primary_key=True)
-  scenario_id: Mapped[int] = mapped_column(Integer, ForeignKey("scenarios.id"), index=True)
-  target_faction_id: Mapped[int] = mapped_column(Integer, ForeignKey("factions.id"), index=True)
-  viewer_faction_id: Mapped[int] = mapped_column(Integer, ForeignKey("factions.id"), index=True)
-  revealed_count: Mapped[int] = mapped_column(Integer, default=0)
-  last_revealed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class TowerConfig(Base):

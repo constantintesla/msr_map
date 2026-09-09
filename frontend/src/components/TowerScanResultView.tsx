@@ -40,11 +40,6 @@ export default function TowerScanResultView({ result }: { result: TowerScanResul
             {d.elder_note && <p className="text-sm text-zinc-200 whitespace-pre-wrap">{d.elder_note}</p>}
           </div>
         )}
-        {d.drop_lat != null && d.drop_lon != null && (
-          <p className="text-sm text-zinc-300">
-            Координата закладки: <span className="font-mono">{d.drop_lat.toFixed(6)}, {d.drop_lon.toFixed(6)}</span>
-          </p>
-        )}
         {d.cache_targets && (
           <div>
             <p className="text-sm text-zinc-400 mb-1">

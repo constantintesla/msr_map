@@ -40,18 +40,16 @@ class TowerFactionAdminOut(BaseModel):
   kind: str
   elder_note: str | None = None
   elder_photo_url: str | None = None
-  drop_lat: float | None = None
-  drop_lon: float | None = None
   join_url: str | None = None
   qr_url: str | None = None
   manual_code: str | None = None
   registered_count: int = 0
+  cache_unlocked_count: int = 0
+  cache_total: int = 0
 
 
 class TowerFactionAdminUpdate(BaseModel):
   elder_note: str | None = None
-  drop_lat: float | None = None
-  drop_lon: float | None = None
 
 
 class TowerCommanderAdminOut(BaseModel):

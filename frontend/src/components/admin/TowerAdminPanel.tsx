@@ -35,7 +35,6 @@ export default function TowerAdminPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notes, setNotes] = useState<Record<number, string>>({});
-  const [dropCoords, setDropCoords] = useState<Record<number, { lat: string; lon: string }>>({});
   const [scheduleInputs, setScheduleInputs] = useState<string[]>(['']);
   const [copied, setCopied] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState<number | null>(null);
@@ -50,14 +49,6 @@ export default function TowerAdminPanel() {
       setOverview(data);
       if (data) {
         setNotes(Object.fromEntries(data.factions.map((f) => [f.id, f.elder_note || ''])));
-        setDropCoords(
-          Object.fromEntries(
-            data.factions.map((f) => [
-              f.id,
-              { lat: f.drop_lat != null ? String(f.drop_lat) : '', lon: f.drop_lon != null ? String(f.drop_lon) : '' },
-            ])
-          )
-        );
         setScheduleInputs(
           data.reveal_schedule.length ? data.reveal_schedule.map(toLocalInputValue) : ['']
         );
@@ -101,22 +92,6 @@ export default function TowerAdminPanel() {
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось сохранить');
-    }
-  };
-
-  const handleSaveDropCoords = async (factionId: number) => {
-    const raw = dropCoords[factionId];
-    const lat = Number(raw?.lat);
-    const lon = Number(raw?.lon);
-    if (!raw?.lat || !raw?.lon || Number.isNaN(lat) || Number.isNaN(lon)) {
-      setError('Координаты закладки: введите оба числа (lat и lon)');
-      return;
-    }
-    try {
-      await updateTowerFaction(factionId, { drop_lat: lat, drop_lon: lon });
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить координаты');
     }
   };
 
@@ -283,36 +258,9 @@ export default function TowerAdminPanel() {
                           />
                         </label>
                       </div>
-                      <div className="pt-2">
-                        <label className="text-xs text-zinc-500 block mb-1">
-                          Координата закладки для ДРГ (куда оставить схрон в деревне)
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            className="input text-sm py-1 w-32"
-                            placeholder="lat"
-                            value={dropCoords[f.id]?.lat ?? ''}
-                            onChange={(e) =>
-                              setDropCoords((c) => ({ ...c, [f.id]: { lat: e.target.value, lon: c[f.id]?.lon ?? '' } }))
-                            }
-                          />
-                          <input
-                            className="input text-sm py-1 w-32"
-                            placeholder="lon"
-                            value={dropCoords[f.id]?.lon ?? ''}
-                            onChange={(e) =>
-                              setDropCoords((c) => ({ ...c, [f.id]: { lat: c[f.id]?.lat ?? '', lon: e.target.value } }))
-                            }
-                          />
-                          <button
-                            type="button"
-                            className="btn text-xs border border-zinc-600"
-                            onClick={() => void handleSaveDropCoords(f.id)}
-                          >
-                            Сохранить
-                          </button>
-                        </div>
-                      </div>
+                      <p className="text-xs text-zinc-400 pt-2">
+                        Схроны поставлены ДРГ: {f.cache_unlocked_count} из {f.cache_total}
+                      </p>
                     </div>
                   )}
                 </div>
