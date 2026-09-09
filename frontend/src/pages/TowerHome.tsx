@@ -4,11 +4,14 @@ import {
   dismissTowerOrder,
   fetchActiveTowerOrders,
   fetchTowerChatMessages,
+  fetchTowerScannable,
+  fetchTowerStatus,
   scanTowerToken,
   sendTowerChatMessage,
   type TowerChatMessage,
   type TowerOrder,
   type TowerScanResult,
+  type TowerScannableItem,
 } from '../api/client';
 import { logout } from '../utils/auth';
 import TowerScanResultView from '../components/TowerScanResultView';
@@ -28,16 +31,35 @@ export default function TowerHomePage() {
   const [orders, setOrders] = useState<TowerOrder[]>([]);
   const [chat, setChat] = useState<TowerChatMessage[]>([]);
   const [chatText, setChatText] = useState('');
+  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
+  const [scannable, setScannable] = useState<TowerScannableItem[]>([]);
 
   useEffect(() => {
     const load = () => {
       fetchActiveTowerOrders().then(setOrders);
       fetchTowerChatMessages('eng').then((r) => setChat(r.items));
+      fetchTowerStatus().then((r) => setCurrentPhase(r.current_phase));
     };
     load();
+    fetchTowerScannable().then(setScannable);
     const t = setInterval(load, 6000);
     return () => clearInterval(t);
   }, []);
+
+  const handleMarkerClick = async (name: string) => {
+    const item = scannable.find((s) => s.name === name);
+    if (!item?.code) return;
+    setError('');
+    setLoading(true);
+    try {
+      const r = await scanTowerToken(undefined, item.code);
+      setResult(r);
+    } catch (e2) {
+      setError(e2 instanceof Error ? e2.message : 'Не удалось отсканировать');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleManualScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,8 +97,23 @@ export default function TowerHomePage() {
         </button>
       </div>
 
+      {currentPhase && (
+        <div className="mb-4 rounded-lg border border-sideA/40 bg-sideA/10 px-3 py-2 text-sm text-sideA">
+          {currentPhase}
+        </div>
+      )}
+
       <div className="mb-6">
-        <TowerMap points={TOWER_MAP_BY_FACTION[factionCode] || []} />
+        <TowerMap
+          points={TOWER_MAP_BY_FACTION[factionCode] || []}
+          clickableNames={new Set(scannable.filter((s) => s.code).map((s) => s.name))}
+          onMarkerClick={(name) => void handleMarkerClick(name)}
+        />
+        {scannable.length > 0 && (
+          <p className="text-xs text-zinc-500 mt-1">
+            Точки с пунктирной обводкой можно «отсканировать» кликом — пока не расставлены настоящие QR.
+          </p>
+        )}
       </div>
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 mb-6">

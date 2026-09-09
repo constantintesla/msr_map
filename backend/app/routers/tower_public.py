@@ -5,6 +5,7 @@ GET резолвит join_token в название стороны для заг
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,7 @@ from app.database import get_db
 from app.lpd_channels import lpd_frequency_mhz, lpd_label
 from app.models import User
 from app.schemas import TokenResponse
+from app.tower.media import resolve_elder_photo_path
 from app.tower.models import Faction
 from app.tower.schemas import TowerJoinInfoOut, TowerRegisterRequest
 
@@ -72,3 +74,9 @@ def register(token: str, body: TowerRegisterRequest, db: Annotated[Session, Depe
     faction_code=faction.code,
     faction_name=faction.name,
   )
+
+
+@router.get("/elder-photo/{filename}")
+def get_elder_photo(filename: str):
+  path = resolve_elder_photo_path(filename)
+  return FileResponse(path)

@@ -1393,6 +1393,8 @@ export interface TowerAdminOverview {
   reveal_schedule: string[];
   ur_sync_window_seconds: number;
   ur_hold_seconds: number;
+  phases: string[];
+  current_phase: number;
 }
 
 async function towerAdminError(res: Response, fallback: string): Promise<never> {
@@ -1442,6 +1444,38 @@ export async function updateTowerRevealSchedule(thresholds: string[]): Promise<{
     body: JSON.stringify({ thresholds }),
   });
   if (!res.ok) await towerAdminError(res, 'Не удалось сохранить расписание');
+  return res.json();
+}
+
+export async function uploadTowerElderPhoto(factionId: number, file: File): Promise<TowerFactionAdmin> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await authFetch(`${API_BASE}/api/admin/tower/factions/${factionId}/elder-photo`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось загрузить фото');
+  return res.json();
+}
+
+export async function updateTowerPhases(phases: string[]): Promise<{ ok: boolean; phases: string[] }> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/phases`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ phases }),
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось сохранить этапы');
+  return res.json();
+}
+
+export async function setTowerCurrentPhase(phase: number): Promise<{ ok: boolean; current_phase: number }> {
+  const res = await authFetch(`${API_BASE}/api/admin/tower/phases/current`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ phase }),
+  });
+  if (!res.ok) await towerAdminError(res, 'Не удалось переключить этап');
   return res.json();
 }
 
@@ -1509,6 +1543,20 @@ export async function scanTowerToken(token?: string, code?: string): Promise<Tow
   return res.json();
 }
 
+export interface TowerScannableItem {
+  name: string;
+  lat: number;
+  lon: number;
+  code: string | null;
+}
+
+export async function fetchTowerScannable(): Promise<TowerScannableItem[]> {
+  const res = await authFetch(`${API_BASE}/api/tower/scannable`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data as { items: TowerScannableItem[] }).items;
+}
+
 export interface TowerUrZoneStatus {
   zone_id: number;
   zone_name: string;
@@ -1520,7 +1568,7 @@ export interface TowerUrZoneStatus {
   points: Array<{ id: number; name: string; scanned: boolean }>;
 }
 
-export async function fetchTowerStatus(): Promise<{ ur_zones: TowerUrZoneStatus[] }> {
+export async function fetchTowerStatus(): Promise<{ ur_zones: TowerUrZoneStatus[]; current_phase: string | null }> {
   const res = await authFetch(`${API_BASE}/api/tower/status`, { headers: authHeaders() });
   if (!res.ok) await towerAdminError(res, 'Ошибка загрузки статуса');
   return res.json();

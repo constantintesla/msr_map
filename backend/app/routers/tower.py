@@ -10,7 +10,7 @@ from app.models import User
 from app.routers import ws
 from app.services.chat_media import resolve_media_path, save_chat_media
 from app.tower import commander_service
-from app.tower.models import Faction
+from app.tower.models import Faction, UrPoint
 from app.tower.scan_service import perform_scan
 from app.tower.schemas import (
   TowerChatMessageOut,
@@ -49,11 +49,51 @@ def status(
   db: Annotated[Session, Depends(get_db)],
   user: Annotated[User, Depends(require_tower_user)],
 ):
-  scenario_id = _user_scenario_id(db, user)
-  zones = refresh_all_zones(db, scenario_id)
+  from app.tower.config_service import current_phase_name, get_tower_config
   from app.tower.scan_service import zone_to_dict
 
-  return {"ur_zones": [zone_to_dict(db, z) for z in zones]}
+  scenario_id = _user_scenario_id(db, user)
+  zones = refresh_all_zones(db, scenario_id)
+  cfg = get_tower_config(db, scenario_id)
+  return {
+    "ur_zones": [zone_to_dict(db, z) for z in zones],
+    "current_phase": current_phase_name(cfg),
+  }
+
+
+@router.get("/scannable")
+def scannable(
+  db: Annotated[Session, Depends(get_db)],
+  user: Annotated[User, Depends(require_tower_user)],
+):
+  """Для тестирования до печати QR-табличек: те же цели, что и физические
+  таблички, с ручным кодом — чтобы можно было «сканировать» кликом по карте."""
+  scanner = db.query(Faction).filter(Faction.id == user.faction_id).first()
+  if scanner is None:
+    raise HTTPException(status_code=400, detail="У аккаунта нет стороны")
+
+  items: list[dict] = []
+  if scanner.kind == "village":
+    others = (
+      db.query(Faction)
+      .filter(Faction.scenario_id == scanner.scenario_id, Faction.kind == "village", Faction.id != scanner.id)
+      .all()
+    )
+    for f in others:
+      if f.lat is not None and f.lon is not None:
+        items.append({"name": f"Деревня {f.name}", "lat": f.lat, "lon": f.lon, "code": f.manual_code})
+  else:
+    villages = db.query(Faction).filter(
+      Faction.scenario_id == scanner.scenario_id, Faction.kind == "village"
+    ).all()
+    for f in villages:
+      if f.lat is not None and f.lon is not None:
+        items.append({"name": f"Деревня {f.name}", "lat": f.lat, "lon": f.lon, "code": f.manual_code})
+    points = db.query(UrPoint).filter(UrPoint.scenario_id == scanner.scenario_id).all()
+    for p in points:
+      items.append({"name": p.name, "lat": p.lat, "lon": p.lon, "code": p.manual_code})
+
+  return {"items": items}
 
 
 def _user_scenario_id(db: Session, user: User) -> int:

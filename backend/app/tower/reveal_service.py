@@ -95,7 +95,9 @@ def scan_village_board(
     return result
 
   # СБГ / ДРГ — досье старейшины; ДРГ дополнительно получает координату закладки
-  result["elder_photo_url"] = target.elder_photo_path
+  from app.tower.media import elder_photo_url
+
+  result["elder_photo_url"] = elder_photo_url(target.elder_photo_path)
   result["elder_note"] = target.elder_note
   if viewer.code == "drg":
     result["drop_lat"] = target.drop_lat

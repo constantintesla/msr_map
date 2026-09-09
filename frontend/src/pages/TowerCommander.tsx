@@ -6,6 +6,7 @@ import {
   fetchTowerChatRecipients,
   fetchTowerOrders,
   fetchTowerRoster,
+  fetchTowerStatus,
   sendTowerChatMessage,
   sendTowerOrder,
   type TowerChatMessage,
@@ -26,6 +27,14 @@ export default function TowerCommanderPage() {
   const factionCode = localStorage.getItem('faction_code') || '';
   const username = localStorage.getItem('username') || '';
   const [tab, setTab] = useState<Tab>('map');
+  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = () => fetchTowerStatus().then((r) => setCurrentPhase(r.current_phase));
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <div className="min-h-dvh flex flex-col max-w-lg mx-auto">
@@ -38,6 +47,9 @@ export default function TowerCommanderPage() {
           Выйти
         </button>
       </div>
+      {currentPhase && (
+        <div className="px-4 py-1.5 bg-sideA/10 border-b border-sideA/30 text-xs text-sideA">{currentPhase}</div>
+      )}
 
       <div className="flex border-b border-zinc-800">
         {(['map', 'chat', 'orders', 'roster'] as Tab[]).map((t) => (
