@@ -14,6 +14,7 @@ from app.tower import commander_service
 from app.tower.config_service import get_tower_config
 from app.tower.media import elder_photo_url, save_elder_photo
 from app.tower.models import Faction, UrPoint, UrZone, VillageCacheTarget
+from app.tower.reveal_service import allowed_reveal_count
 from app.tower.schemas import (
   TowerAdminOverviewOut,
   TowerAdminRosterItemOut,
@@ -51,6 +52,7 @@ def _overview(db: Session, scenario_id: int) -> TowerAdminOverviewOut:
   for f in factions:
     registered = db.query(User).filter(User.faction_id == f.id, User.role == "faction").count()
     cache_total = db.query(VillageCacheTarget).filter(VillageCacheTarget.faction_id == f.id).count()
+    cache_revealed = min(allowed_reveal_count(db, scenario_id), cache_total)
     faction_out.append(
       TowerFactionAdminOut(
         id=f.id,
@@ -63,7 +65,7 @@ def _overview(db: Session, scenario_id: int) -> TowerAdminOverviewOut:
         qr_url=qr_entry_url(f.qr_token) if f.qr_token else None,
         manual_code=f.manual_code,
         registered_count=registered,
-        cache_unlocked_count=f.cache_unlocked_count,
+        cache_revealed_count=cache_revealed,
         cache_total=cache_total,
       )
     )

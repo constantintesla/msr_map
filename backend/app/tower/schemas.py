@@ -44,7 +44,7 @@ class TowerFactionAdminOut(BaseModel):
   qr_url: str | None = None
   manual_code: str | None = None
   registered_count: int = 0
-  cache_unlocked_count: int = 0
+  cache_revealed_count: int = 0
   cache_total: int = 0
 
 

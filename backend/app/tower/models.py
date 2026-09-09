@@ -30,9 +30,6 @@ class Faction(Base):
   manual_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
   elder_photo_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
   elder_note: Mapped[str | None] = mapped_column(Text, nullable=True)
-  # ДРГ «ставит» схроны деревни по расписанию (см reveal_service) — сколько уже
-  # поставлено; вражеская деревня видит ровно столько же, сколько уже поставил ДРГ.
-  cache_unlocked_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class VillageCacheTarget(Base):

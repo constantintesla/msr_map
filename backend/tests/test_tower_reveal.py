@@ -1,9 +1,8 @@
 """Тесты раскрытия координат схронов деревни (app/tower/reveal_service.py).
 
-ДРГ «ставит» схроны деревни по расписанию реального времени (сканируя её
-табличку); враждебная деревня, сканируя ту же табличку, видит ровно то, что
-ДРГ уже поставил — общий счётчик на самой деревне, а не отдельный на пару
-(target, viewer)."""
+Схроны существуют физически с самого начала — раскрытие их координат идёт
+чисто по расписанию реального времени, одинаково для враждебной деревни и
+для ДРГ (кто бы ни сканировал табличку в данный момент — видит одно и то же)."""
 
 import json
 from datetime import datetime, timedelta
@@ -48,40 +47,34 @@ def _make_targets(db: Session, scenario_id: int, faction_id: int) -> None:
   db.commit()
 
 
-def test_drg_unlocks_cache_targets_cumulatively_by_schedule(db: Session):
+def test_village_reveal_cumulative_by_schedule(db: Session):
   scenario_id = _make_scenario(db)
+  viewer = _make_faction(db, scenario_id, code="korbul", kind="village")
   target = _make_faction(db, scenario_id, code="prvonek", kind="village")
-  drg = _make_faction(db, scenario_id, code="drg", kind="ops")
   _make_targets(db, scenario_id, target.id)
 
   now = datetime.utcnow()
   _set_schedule(db, scenario_id, [now + timedelta(minutes=30), now + timedelta(minutes=90), now + timedelta(minutes=150)])
 
-  # до первого порога — ДРГ ничего не может поставить
-  result = scan_village_board(db, scenario_id=scenario_id, viewer=drg, target=target, now=now)
+  # до первого порога — ничего не раскрыто
+  result = scan_village_board(db, scenario_id=scenario_id, viewer=viewer, target=target, now=now)
   assert result["cache_targets"] == []
 
-  # после первого порога — ДРГ ставит первый схрон
+  # после первого порога — одна координата
   result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=31)
+    db, scenario_id=scenario_id, viewer=viewer, target=target, now=now + timedelta(minutes=31)
   )
   assert [t["name"] for t in result["cache_targets"]] == ["Д1-1"]
 
-  # повторный скан ДРГ в том же окне — без изменений (идемпотентно)
+  # после второго порога — кумулятивно две
   result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=45)
-  )
-  assert [t["name"] for t in result["cache_targets"]] == ["Д1-1"]
-
-  # после второго порога — кумулятивно два
-  result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=91)
+    db, scenario_id=scenario_id, viewer=viewer, target=target, now=now + timedelta(minutes=91)
   )
   assert [t["name"] for t in result["cache_targets"]] == ["Д1-1", "Д1-2"]
 
   # после третьего — все три
   result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=151)
+    db, scenario_id=scenario_id, viewer=viewer, target=target, now=now + timedelta(minutes=151)
   )
   assert [t["name"] for t in result["cache_targets"]] == ["Д1-1", "Д1-2", "Д1-3"]
 
@@ -89,8 +82,8 @@ def test_drg_unlocks_cache_targets_cumulatively_by_schedule(db: Session):
 def test_generalized_many_thresholds(db: Session):
   """Универсальность алгоритма: N точек, раскрываемых каждые 15 минут — не только 3/2 часа."""
   scenario_id = _make_scenario(db)
+  viewer = _make_faction(db, scenario_id, code="korbul", kind="village")
   target = _make_faction(db, scenario_id, code="prvonek", kind="village")
-  drg = _make_faction(db, scenario_id, code="drg", kind="ops")
   names = [f"Т{i}" for i in range(1, 6)]
   for i, name in enumerate(names, start=1):
     db.add(
@@ -105,17 +98,16 @@ def test_generalized_many_thresholds(db: Session):
   _set_schedule(db, scenario_id, thresholds)
 
   result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=15 * 3 + 1)
+    db, scenario_id=scenario_id, viewer=viewer, target=target, now=now + timedelta(minutes=15 * 3 + 1)
   )
   assert len(result["cache_targets"]) == 3
 
 
-def test_village_sees_only_what_drg_already_unlocked(db: Session):
-  """Ключевая логика: враждебная деревня видит ровно то, что уже поставил ДРГ —
-  не больше (даже если порог по времени уже наступил, но ДРГ ещё не сканировал),
-  и не меньше (получает то же самое, без собственного отдельного отсчёта)."""
+def test_drg_sees_the_same_reveal_as_the_rival_village(db: Session):
+  """ДРГ и вражеская деревня, сканируя в один момент, видят одно и то же —
+  схрон существует физически с начала игры, раскрытие идёт только по часам."""
   scenario_id = _make_scenario(db)
-  target = _make_faction(db, scenario_id, code="prvonek", kind="village")
+  target = _make_faction(db, scenario_id, code="prvonek", kind="village", elder_note="Старейшина: Иван")
   viewer_village = _make_faction(db, scenario_id, code="korbul", kind="village")
   drg = _make_faction(db, scenario_id, code="drg", kind="ops")
   _make_targets(db, scenario_id, target.id)
@@ -123,26 +115,26 @@ def test_village_sees_only_what_drg_already_unlocked(db: Session):
   now = datetime.utcnow()
   _set_schedule(db, scenario_id, [now + timedelta(minutes=30), now + timedelta(minutes=90)])
 
-  # порог уже наступил, но ДРГ ещё не сканировал табличку — деревня не видит ничего
-  result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=viewer_village, target=target, now=now + timedelta(minutes=31)
+  # до порога — оба ничего не видят
+  assert scan_village_board(db, scenario_id=scenario_id, viewer=drg, target=target, now=now)["cache_targets"] == []
+  assert (
+    scan_village_board(db, scenario_id=scenario_id, viewer=viewer_village, target=target, now=now)["cache_targets"]
+    == []
   )
-  assert result["cache_targets"] == []
 
-  # ДРГ наконец сканирует и «ставит» схрон
-  scan_village_board(db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=35))
-
-  # теперь деревня видит ровно то, что поставил ДРГ, даже до второго порога
-  result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=viewer_village, target=target, now=now + timedelta(minutes=40)
+  # после порога — оба видят одну и ту же координату, независимо от порядка сканов
+  drg_result = scan_village_board(
+    db, scenario_id=scenario_id, viewer=drg, target=target, now=now + timedelta(minutes=31)
   )
-  assert [t["name"] for t in result["cache_targets"]] == ["Д1-1"]
-
-  # деревня НЕ может получить второй схрон раньше ДРГ, даже если время уже настало
-  result = scan_village_board(
-    db, scenario_id=scenario_id, viewer=viewer_village, target=target, now=now + timedelta(minutes=91)
+  village_result = scan_village_board(
+    db, scenario_id=scenario_id, viewer=viewer_village, target=target, now=now + timedelta(minutes=45)
   )
-  assert [t["name"] for t in result["cache_targets"]] == ["Д1-1"]
+  assert [t["name"] for t in drg_result["cache_targets"]] == ["Д1-1"]
+  assert [t["name"] for t in village_result["cache_targets"]] == ["Д1-1"]
+
+  # ДРГ дополнительно получает досье старейшины, деревня — нет
+  assert drg_result["elder_note"] == "Старейшина: Иван"
+  assert "elder_note" not in village_result
 
 
 def test_self_scan_blocked(db: Session):

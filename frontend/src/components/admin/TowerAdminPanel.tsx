@@ -259,7 +259,7 @@ export default function TowerAdminPanel() {
                         </label>
                       </div>
                       <p className="text-xs text-zinc-400 pt-2">
-                        Схроны поставлены ДРГ: {f.cache_unlocked_count} из {f.cache_total}
+                        Схроны раскрыты врагу: {f.cache_revealed_count} из {f.cache_total}
                       </p>
                     </div>
                   )}

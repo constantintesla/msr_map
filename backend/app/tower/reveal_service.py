@@ -1,11 +1,12 @@
 """Раскрытие координат схронов деревни.
 
-ДРГ, сканируя табличку деревни, «ставит» её схроны по расписанию реального
-времени — TowerConfig.reveal_schedule_json, отсортированный список
+Схроны деревни физически существуют с самого начала игры (таблички ставятся
+до старта). Раскрытие их координат врагу — чисто по расписанию реального
+времени: TowerConfig.reveal_schedule_json, отсортированный список
 ISO-datetime порогов. Сколько порогов уже наступило — столько схронов (по
-порядку reveal_order) ДРГ успел поставить. Враждебная деревня, сканируя ту же
-табличку, видит ровно то, что ДРГ уже поставил — не больше и не меньше,
-независимо от того, когда сама деревня зашла сканировать.
+порядку reveal_order) уже раскрыто. Это не зависит от того, кто и когда
+сканирует табличку — враждебная деревня и ДРГ, сканируя в один момент,
+видят одно и то же.
 """
 
 import json
@@ -51,17 +52,6 @@ def scan_village_board(
     "target_faction_name": target.name,
   }
 
-  if viewer.code == "drg":
-    allowed = allowed_reveal_count(db, scenario_id, now)
-    if target.cache_unlocked_count < allowed:
-      target.cache_unlocked_count = allowed
-      tower_log_event(
-        db,
-        scenario_id,
-        "tower_cache_unlocked_by_drg",
-        {"target": target.code, "count": target.cache_unlocked_count},
-      )
-
   if viewer.kind == "village" or viewer.code == "drg":
     targets = (
       db.query(VillageCacheTarget)
@@ -69,10 +59,14 @@ def scan_village_board(
       .order_by(VillageCacheTarget.reveal_order)
       .all()
     )
-    revealed = targets[: target.cache_unlocked_count]
+    allowed = min(allowed_reveal_count(db, scenario_id, now), len(targets))
+    revealed = targets[:allowed]
     result["cache_targets"] = [{"name": t.name, "lat": t.lat, "lon": t.lon} for t in revealed]
-    result["revealed_count"] = target.cache_unlocked_count
+    result["revealed_count"] = allowed
     result["total_targets"] = len(targets)
+    tower_log_event(
+      db, scenario_id, "tower_village_revealed", {"target": target.code, "viewer": viewer.code, "count": allowed}
+    )
 
   if viewer.kind == "ops":
     from app.tower.media import elder_photo_url

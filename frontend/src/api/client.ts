@@ -1360,7 +1360,7 @@ export interface TowerFactionAdmin {
   qr_url: string | null;
   manual_code: string | null;
   registered_count: number;
-  cache_unlocked_count: number;
+  cache_revealed_count: number;
   cache_total: number;
 }
 

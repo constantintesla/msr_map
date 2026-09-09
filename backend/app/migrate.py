@@ -142,9 +142,6 @@ def run_migrations() -> None:
     "engineer_locations", "faction_id", "ALTER TABLE engineer_locations ADD COLUMN faction_id INTEGER"
   )
   _add_column_if_missing(
-    "factions", "cache_unlocked_count", "ALTER TABLE factions ADD COLUMN cache_unlocked_count INTEGER DEFAULT 0"
-  )
-  _add_column_if_missing(
     "tower_ur_points", "last_sbg_scan_by", "ALTER TABLE tower_ur_points ADD COLUMN last_sbg_scan_by INTEGER"
   )
   for table in (
