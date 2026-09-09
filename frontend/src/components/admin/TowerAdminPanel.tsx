@@ -13,6 +13,7 @@ import {
   type TowerAdminRosterItem,
 } from '../../api/client';
 import TowerMap from '../TowerMap';
+import TowerQrPrint from './TowerQrPrint';
 import { TOWER_MAP_ADMIN } from '../../data/towerMapPoints';
 
 function toLocalInputValue(iso: string): string {
@@ -21,11 +22,12 @@ function toLocalInputValue(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-type Tab = 'map' | 'factions' | 'phases' | 'ur' | 'schedule';
+type Tab = 'map' | 'factions' | 'qr' | 'phases' | 'ur' | 'schedule';
 
 const TAB_LABEL: Record<Tab, string> = {
   map: 'Карта',
   factions: 'Стороны',
+  qr: 'QR-коды',
   phases: 'Этапы',
   ur: 'Укрепрайоны',
   schedule: 'Расписание',
@@ -205,7 +207,7 @@ export default function TowerAdminPanel() {
   return (
     <div className="no-print flex flex-col h-full">
       <div className="flex border-b border-zinc-800 shrink-0">
-        {(['map', 'factions', 'phases', 'ur', 'schedule'] as Tab[]).map((t) => (
+        {(['map', 'factions', 'qr', 'phases', 'ur', 'schedule'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -341,6 +343,8 @@ export default function TowerAdminPanel() {
             })}
           </div>
         )}
+
+        {tab === 'qr' && <TowerQrPrint overview={overview} />}
 
         {tab === 'phases' && (
           <div className="space-y-2">

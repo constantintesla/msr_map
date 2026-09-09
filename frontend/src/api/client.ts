@@ -1360,6 +1360,7 @@ export interface TowerFactionAdmin {
   drop_lon: number | null;
   join_url: string | null;
   qr_url: string | null;
+  manual_code: string | null;
   registered_count: number;
 }
 
@@ -1375,6 +1376,7 @@ export interface TowerUrPointAdmin {
   name: string;
   scanned: boolean;
   qr_url: string | null;
+  manual_code: string | null;
 }
 
 export interface TowerUrZoneAdmin {

@@ -44,6 +44,7 @@ class TowerFactionAdminOut(BaseModel):
   drop_lon: float | None = None
   join_url: str | None = None
   qr_url: str | None = None
+  manual_code: str | None = None
   registered_count: int = 0
 
 
@@ -65,6 +66,7 @@ class TowerUrPointAdminOut(BaseModel):
   name: str
   scanned: bool
   qr_url: str | None = None
+  manual_code: str | None = None
 
 
 class TowerUrZoneAdminOut(BaseModel):

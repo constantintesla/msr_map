@@ -64,6 +64,7 @@ def _overview(db: Session, scenario_id: int) -> TowerAdminOverviewOut:
         drop_lon=f.drop_lon,
         join_url=_join_url(f.join_token) if f.join_token else None,
         qr_url=qr_entry_url(f.qr_token) if f.qr_token else None,
+        manual_code=f.manual_code,
         registered_count=registered,
       )
     )
@@ -105,6 +106,7 @@ def _overview(db: Session, scenario_id: int) -> TowerAdminOverviewOut:
             name=p.name,
             scanned=p.last_sbg_scan_at is not None,
             qr_url=qr_entry_url(p.qr_token) if p.qr_token else None,
+            manual_code=p.manual_code,
           )
           for p in points
         ],
