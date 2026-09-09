@@ -87,5 +87,7 @@ class UrPoint(Base):
   qr_token: Mapped[str | None] = mapped_column(String(24), unique=True, nullable=True, index=True)
   manual_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
   last_sbg_scan_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+  # кто именно из СБГ отсканировал — нужно, чтобы требовать трёх РАЗНЫХ людей на трёх точках
+  last_sbg_scan_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
   zone: Mapped["UrZone"] = relationship(back_populates="points")

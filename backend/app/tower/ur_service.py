@@ -1,6 +1,8 @@
 """Синхронный захват укрепрайона (УР): 3 точки КПП, СБГ сканирует все три в
 пределах короткого окна -> запускается таймер удержания 20 минут -> УР взят.
-Скан любой из трёх точек стороной ДРГ в любой момент до захвата — сброс.
+Обязательно трое РАЗНЫХ людей — один человек, обежавший все три точки,
+таймер удержания не запускает. Скан любой из трёх точек стороной ДРГ в любой
+момент до захвата — сброс.
 """
 
 from datetime import datetime, timedelta
@@ -33,8 +35,13 @@ def _recompute_zone(db: Session, zone: UrZone, cfg: TowerConfig, now: datetime) 
 
   earliest = min(scans)
   window = timedelta(seconds=cfg.ur_sync_window_seconds)
+  scanners = {p.last_sbg_scan_by for p in points if p.last_sbg_scan_by is not None}
 
-  if len(scans) == len(points) and (max(scans) - earliest) <= window:
+  if (
+    len(scans) == len(points)
+    and (max(scans) - earliest) <= window
+    and len(scanners) == len(points)
+  ):
     zone.status = "holding"
     zone.hold_started_at = now
     zone.sync_started_at = None
@@ -44,6 +51,7 @@ def _recompute_zone(db: Session, zone: UrZone, cfg: TowerConfig, now: datetime) 
   if now - earliest > window:
     for p in points:
       p.last_sbg_scan_at = None
+      p.last_sbg_scan_by = None
     zone.status = "idle"
     zone.sync_started_at = None
     return
@@ -63,12 +71,15 @@ def refresh_all_zones(db: Session, scenario_id: int, now: datetime | None = None
   return zones
 
 
-def scan_sbg_ur_point(db: Session, *, scenario_id: int, point: UrPoint, now: datetime | None = None) -> UrZone:
+def scan_sbg_ur_point(
+  db: Session, *, scenario_id: int, point: UrPoint, scanner_user_id: int, now: datetime | None = None
+) -> UrZone:
   now = now or datetime.utcnow()
   cfg = get_tower_config(db, scenario_id)
   zone = db.query(UrZone).filter(UrZone.id == point.zone_id).first()
   if zone.status != "captured":
     point.last_sbg_scan_at = now
+    point.last_sbg_scan_by = scanner_user_id
     _recompute_zone(db, zone, cfg, now)
   db.commit()
   db.refresh(zone)
@@ -84,6 +95,7 @@ def scan_drg_ur_point(db: Session, *, scenario_id: int, point: UrPoint, now: dat
   was_active = zone.status in ("syncing", "holding")
   for p in db.query(UrPoint).filter(UrPoint.zone_id == zone.id).all():
     p.last_sbg_scan_at = None
+    p.last_sbg_scan_by = None
   zone.status = "idle"
   zone.sync_started_at = None
   zone.hold_started_at = None

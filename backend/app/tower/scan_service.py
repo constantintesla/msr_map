@@ -76,7 +76,7 @@ def perform_scan(
     )
 
   if scanner_faction.code == "sbg":
-    zone = scan_sbg_ur_point(db, scenario_id=scenario_id, point=obj)
+    zone = scan_sbg_ur_point(db, scenario_id=scenario_id, point=obj, scanner_user_id=scanner.id)
   elif scanner_faction.code == "drg":
     zone = scan_drg_ur_point(db, scenario_id=scenario_id, point=obj)
   else:
